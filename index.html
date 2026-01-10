@@ -158,6 +158,39 @@
         box-decoration-break: clone;
       }
 
+      /* Poster resize handle hint (breathing) */
+      @keyframes mp-resize-hint-breathe {
+        0% { opacity: 0.32; transform: scaleY(0.92); }
+        50% { opacity: 0.92; transform: scaleY(1.06); }
+        100% { opacity: 0.32; transform: scaleY(0.92); }
+      }
+      .mp-resize-handle .mp-resize-hint {
+        background: var(--mp-resize-hint-color, #3b82f6);
+        opacity: 0.22;
+        animation: none;
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 22%, transparent),
+          0 0 10px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 18%, transparent);
+        will-change: opacity, transform;
+      }
+      .mp-preview-focused .mp-resize-handle .mp-resize-hint {
+        opacity: 0.42;
+        animation: mp-resize-hint-breathe 1.8s ease-in-out infinite;
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 35%, transparent),
+          0 0 14px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 30%, transparent);
+      }
+      .mp-resize-handle:hover .mp-resize-hint {
+        opacity: 1;
+        animation-play-state: paused;
+        box-shadow:
+          0 0 0 1px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 55%, transparent),
+          0 0 18px color-mix(in srgb, var(--mp-resize-hint-color, #3b82f6) 40%, transparent);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .mp-preview-focused .mp-resize-handle .mp-resize-hint { animation: none; }
+      }
+
       /* Custom Range Slider Styling */
       input[type=range] {
         -webkit-appearance: none; /* Hides the slider so that custom slider can be made */

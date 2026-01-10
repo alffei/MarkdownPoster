@@ -97,6 +97,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   // --- Zoom State ---
   // Initialize with a safe default, will be updated on mount
   const [currentScale, setCurrentScale] = useState(100); 
+  const [isPreviewFocused, setIsPreviewFocused] = useState(false);
 
   // --- Resize Logic ---
   const [posterWidth, setPosterWidth] = useState(640);
@@ -154,11 +155,22 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
 
   return (
     <div 
+        tabIndex={0}
+        onMouseDownCapture={(e) => {
+            // Ensure the preview region can "gain focus" by click for hint animations.
+            e.currentTarget.focus();
+        }}
+        onFocusCapture={() => setIsPreviewFocused(true)}
+        onBlurCapture={(e) => {
+            const next = e.relatedTarget as Node | null;
+            if (next && e.currentTarget.contains(next)) return;
+            setIsPreviewFocused(false);
+        }}
         className={`absolute inset-0 overflow-hidden select-none transition-all duration-500 ease-out delay-75 ${
             visible 
                 ? 'opacity-100 scale-100 z-10' 
                 : 'opacity-0 scale-95 z-0 pointer-events-none'
-        }`}
+        } ${isPreviewFocused ? 'mp-preview-focused' : ''}`}
     >
        <TransformWrapper
           centerOnInit={false} 
@@ -221,18 +233,28 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                         {/* --- RESIZE HANDLES --- */}
                         {/* Left Handle */}
                         <div 
-                            className="absolute -left-8 top-0 bottom-0 w-8 flex items-center justify-end cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-l-lg"
+                            className="mp-resize-handle absolute -left-8 top-0 bottom-0 w-8 flex items-center justify-end cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-l-lg"
                             onMouseDown={startResizing('left')}
+                            style={
+                                {
+                                    '--mp-resize-hint-color': isDarkMode ? '#60a5fa' : '#3b82f6',
+                                } as React.CSSProperties
+                            }
                         >
-                            <div className={`w-1.5 h-16 rounded-full transition-colors ${isDarkMode ? 'bg-gray-600 group-hover:bg-blue-400' : 'bg-gray-300 group-hover:bg-blue-500'}`} />
+                            <div className="mp-resize-hint w-1.5 h-16 rounded-full transition-colors" />
                         </div>
 
                         {/* Right Handle */}
                         <div 
-                            className="absolute -right-8 top-0 bottom-0 w-8 flex items-center justify-start cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-r-lg"
+                            className="mp-resize-handle absolute -right-8 top-0 bottom-0 w-8 flex items-center justify-start cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-r-lg"
                             onMouseDown={startResizing('right')}
+                            style={
+                                {
+                                    '--mp-resize-hint-color': isDarkMode ? '#60a5fa' : '#3b82f6',
+                                } as React.CSSProperties
+                            }
                         >
-                            <div className={`w-1.5 h-16 rounded-full transition-colors ${isDarkMode ? 'bg-gray-600 group-hover:bg-blue-400' : 'bg-gray-300 group-hover:bg-blue-500'}`} />
+                            <div className="mp-resize-hint w-1.5 h-16 rounded-full transition-colors" />
                         </div>
                         
                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/75 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
