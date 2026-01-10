@@ -90,12 +90,12 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     }
   },
 
-  // --- 4.3 Vibrant/Social Styles ---
+  // --- 4.3 Social Styles ---
   {
     id: 'tpl_sunset_warm',
     label: '温暖·日落',
     borderThemeId: 'Sunset',
-    layoutThemeId: 'Base',
+    layoutThemeId: 'Ribbon',
     scenario: 'Social',
     features: ['TitleBar', 'Light', 'HighSat'],
     defaults: { 
@@ -109,7 +109,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     id: 'tpl_candy_sweet',
     label: '甜感·糖果',
     borderThemeId: 'Candy',
-    layoutThemeId: 'Base',
+    layoutThemeId: 'Marker',
     scenario: 'Social',
     features: ['TitleBar', 'Light', 'HighSat'],
     defaults: { 
@@ -125,7 +125,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     id: 'tpl_glass_frosted',
     label: '清透·玻璃',
     borderThemeId: 'Glass',
-    layoutThemeId: 'Base',
+    layoutThemeId: 'Ribbon',
     scenario: 'General',
     features: ['Light', 'Minimal', 'CustomColor'],
     defaults: { 
@@ -140,7 +140,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     id: 'tpl_neon_cyber',
     label: '赛博·霓虹',
     borderThemeId: 'Neon',
-    layoutThemeId: 'Vibrant',
+    layoutThemeId: 'Marker',
     scenario: 'Tech',
     features: ['Dark', 'HighSat', 'CustomColor'],
     defaults: { 
@@ -155,7 +155,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     id: 'tpl_aurora_deep',
     label: '深邃·极光',
     borderThemeId: 'Aurora',
-    layoutThemeId: 'Base',
+    layoutThemeId: 'Ribbon',
     scenario: 'Social',
     features: ['Dark', 'CustomColor'],
     defaults: { 
@@ -170,7 +170,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     id: 'tpl_radiance_flow',
     label: '流光·溢彩',
     borderThemeId: 'Radiance',
-    layoutThemeId: 'Base',
+    layoutThemeId: 'Ribbon',
     scenario: 'Social',
     features: ['Dark', 'CustomColor'],
     defaults: { 

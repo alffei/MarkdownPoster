@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 docs
+.vite
+image
 
 # Editor directories and files
 .vscode/*

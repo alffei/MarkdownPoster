@@ -68,7 +68,7 @@ export enum WeChatTheme {
 }
 
 export interface WeChatConfig {
-  layout: LayoutTheme;    // Standard, Classic, Vibrant (now strings)
+  layout: LayoutTheme;    // WeChat layouts id (e.g. Base/Classic/Vibrant)
   primaryColor: string;   // Hex color for the theme
   codeTheme: string;      // e.g., 'dracula', 'github', 'vsDark', 'vsLight'
   macCodeBlock: boolean;

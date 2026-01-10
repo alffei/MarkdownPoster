@@ -69,13 +69,11 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
     const shouldApplyCustomColor = Boolean(customColor) && Boolean(baseTheme.allowCustomColor);
 
     if (shouldApplyCustomColor && customColor) {
-        const { h, s } = hexToHSL(customColor);
+        const { h, s, l } = hexToHSL(customColor);
         
-        // Dynamic Color Logic:
-        // If Custom Color is active, recalculate Primary/Secondary/Assist
-        // Primary = Custom Color
-        // Secondary = HSL(h+45, 70%, 50%)
-        // Assist = HSL(h-45, 70%, 58%)
+        // Dynamic Color Logic (token-driven, low-saturation by default):
+        // Primary = Custom Color (user choice)
+        // Secondary/Assist = subtle hue shifts with restrained saturation/lightness.
         
         // Exception: Neon theme generally keeps its cyan/yellow accents unless explicitly overridden,
         // but for consistency with the "Custom Color" feature, we will apply the dynamic logic here 
@@ -87,13 +85,22 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
         // Compromise: We use the dynamic logic for all custom-enabled themes including Neon to give the user control,
         // matching the "Primary/Secondary/Assist" pattern.
         
+        const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+        const baseS = clamp(s, 28, 62);
+        const secondaryS = clamp(baseS, 26, 56);
+        const assistS = clamp(baseS * 0.55, 14, 34);
+
+        // Keep secondary in the mid range; push assist toward a softer, lighter tint.
+        const secondaryL = clamp(l, 38, 56);
+        const assistL = clamp(l + 28, 76, 92);
+
         finalColors = {
             primary: customColor,
-            secondary: `hsl(${(h + 45) % 360}, 70%, 50%)`,
-            assist: `hsl(${(h - 45 + 360) % 360}, 70%, 58%)`
+            secondary: `hsl(${(h + 32) % 360}, ${secondaryS}%, ${secondaryL}%)`,
+            assist: `hsl(${(h - 32 + 360) % 360}, ${assistS}%, ${assistL}%)`
         };
 
-        // 1. Aurora: Deep, Vibrant, Multi-layered Dark
+        // 1. Aurora: Deep, Multi-layered Dark
         if (themeName === 'Aurora') {
             const sat = 90; 
             const layer1 = `radial-gradient(circle at 0% 0%, hsl(${(h + 40) % 360}, ${sat}%, 45%) 0%, transparent 50%)`;

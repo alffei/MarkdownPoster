@@ -67,9 +67,9 @@ borderThemes:
     prose: "prose-slate"
     watermarkColor: "text-gray-400"
     colors:
-      primary: "#3b82f6"
-      secondary: "#10b981"
-      assist: "#f59e0b"
+      primary: "#111827"
+      secondary: "#3b82f6"
+      assist: "#e5e7eb"
 
   # ----------------------------------------------------------------------------
   # [Win11] Windows 11
@@ -85,9 +85,9 @@ borderThemes:
     prose: "prose-slate"
     watermarkColor: "text-gray-400"
     colors:
-      primary: "#3b82f6"
-      secondary: "#10b981"
-      assist: "#f59e0b"
+      primary: "#111827"
+      secondary: "#3b82f6"
+      assist: "#e5e7eb"
 
   # ----------------------------------------------------------------------------
   # [RetroGame] 像素游戏
@@ -118,12 +118,12 @@ borderThemes:
     content: "bg-transparent text-gray-800"
     header: "bg-orange-100/50 border-b border-orange-200/50 h-10 flex items-center px-4 space-x-2"
     customHeader: "sunset"
-    prose: "prose-orange prose-headings:text-orange-900"
+    prose: "prose-orange prose-headings:text-[var(--mp-primary-text)]"
     watermarkColor: "text-orange-300"
     colors:
-      primary: "#f97316"
-      secondary: "#fb7185"
-      assist: "#fef3c7"
+      primary: "#9a3412"
+      secondary: "#be123c"
+      assist: "#ffedd5"
 
   # ----------------------------------------------------------------------------
   # [Candy] 糖果甜心
@@ -136,12 +136,12 @@ borderThemes:
     content: "bg-yellow-50/50 text-gray-800"
     header: "bg-pink-100 border-b border-pink-200 h-12 flex items-center px-5 justify-between select-none"
     customHeader: "candy"
-    prose: "prose-pink prose-headings:text-pink-600 prose-strong:text-purple-600"
+    prose: "prose-pink prose-headings:text-[var(--mp-primary-text)]"
     watermarkColor: "text-pink-300"
     colors:
-      primary: "#ec4899"
-      secondary: "#a855f7"
-      assist: "#fef08a"
+      primary: "#be185d"
+      secondary: "#6d28d9"
+      assist: "#fef3c7"
 
 
   # ============================================================================
@@ -160,9 +160,9 @@ borderThemes:
     prose: "prose-stone"
     watermarkColor: "text-gray-300"
     colors:
-      primary: "#3b82f6"
-      secondary: "#111827"
-      assist: "#9ca3af"
+      primary: "#111827"
+      secondary: "#3b82f6"
+      assist: "#e5e7eb"
 
   # ----------------------------------------------------------------------------
   # [Sketch] 手绘线稿
@@ -191,7 +191,7 @@ borderThemes:
     header: "" 
     customDecor: "report-brackets"
     content: "bg-transparent text-[#2d2a26]"
-    prose: "prose-stone prose-headings:font-serif prose-headings:text-[#8B1D1D] prose-headings:font-bold prose-strong:text-[#8B1D1D] prose-blockquote:border-l-[#8B1D1D] prose-a:text-[#b91c1c]"
+    prose: "prose-stone prose-headings:font-serif prose-headings:text-[var(--mp-primary-text)] prose-headings:font-bold"
     watermarkColor: "text-[#8B1D1D]/50"
     colors:
       primary: "#8B1D1D"
@@ -208,7 +208,7 @@ borderThemes:
     card: "bg-[#fdfbf7] border-4 border-double border-[#57534e] shadow-xl relative"
     customDecor: "ink-corners"
     content: "bg-[#fdfbf7] text-[#292524]"
-    prose: "prose-stone prose-headings:text-[#1c1917] prose-blockquote:border-l-[#44403c]"
+    prose: "prose-stone prose-headings:text-[var(--mp-primary-text)]"
     watermarkColor: "text-[#57534e]"
     colors:
       primary: "#1c1917"
@@ -224,7 +224,7 @@ borderThemes:
     frame: "bg-[#e5dfce]"
     card: "bg-[#fdf6e3] border-4 border-double border-[#b58900] rounded-sm shadow-xl"
     content: "bg-[#fdf6e3] text-[#657b83]"
-    prose: "prose-headings:text-[#b58900] prose-a:text-[#268bd2]"
+    prose: "prose-headings:text-[var(--mp-primary-text)]"
     watermarkColor: "text-[#b58900] opacity-40"
     colors:
       primary: "#b58900"
@@ -241,12 +241,12 @@ borderThemes:
     frame: "bg-gradient-to-br from-indigo-100 to-purple-100"
     card: "bg-white/40 backdrop-blur-xl shadow-2xl rounded-2xl"
     content: "bg-transparent text-gray-900"
-    prose: "prose-gray prose-headings:text-gray-900"
+    prose: "prose-gray prose-headings:text-[var(--mp-primary-text)]"
     watermarkColor: "text-indigo-300"
     colors:
       primary: "#6366f1"
-      secondary: "#a926d9"
-      assist: "#49bcdf"
+      secondary: "#8b5cf6"
+      assist: "#cffafe"
 
 
   # ============================================================================
@@ -265,12 +265,12 @@ borderThemes:
     card: "bg-gray-900 border-2 border-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.4)] rounded-xl overflow-hidden"
     content: "bg-gray-900 text-pink-50"
     # Added explicit text-white for common elements to prevent black text issues
-    prose: "prose-invert prose-headings:text-pink-400 prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 prose-strong:text-cyan-300 prose-code:text-yellow-300 prose-blockquote:text-pink-100 prose-blockquote:border-pink-500 [&_td]:text-white/90 [&_th]:text-pink-400"
+    prose: "prose-invert prose-headings:text-[var(--mp-primary-text)] prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 prose-code:text-yellow-300 prose-blockquote:text-white/90 prose-blockquote:border-[var(--mp-secondary)] [&_td]:text-white/90 [&_th]:text-pink-400"
     watermarkColor: "text-pink-900"
     colors:
-      primary: "#ec4899"
-      secondary: "#22d3ee"
-      assist: "#facc15"
+      primary: "#e2e8f0"
+      secondary: "#fb7185"
+      assist: "#a5f3fc"
 
   # ----------------------------------------------------------------------------
   # [Aurora] 极光幻境 (allowCustomColor)
@@ -284,12 +284,12 @@ borderThemes:
     card: "bg-black/20 backdrop-blur-md border border-white/10 shadow-2xl rounded-xl"
     # Inner content stays white for readability (frame remains colorful)
     content: "bg-white text-slate-900"
-    prose: "prose-slate prose-headings:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-ul:text-slate-700 prose-ol:text-slate-700 prose-strong:text-slate-900 prose-a:text-blue-600 [&_td]:text-slate-700 [&_th]:text-slate-900 [&_tr]:border-slate-200"
+    prose: "prose-slate prose-headings:text-[var(--mp-primary-text)] prose-p:text-slate-700 prose-li:text-slate-700 prose-ul:text-slate-700 prose-ol:text-slate-700 [&_td]:text-slate-700 [&_th]:text-slate-900 [&_tr]:border-slate-200"
     watermarkColor: "text-white/40"
     colors:
-      primary: "#818cf8"
-      secondary: "#c084fc"
-      assist: "#e879f9"
+      primary: "#4f46e5"
+      secondary: "#8b5cf6"
+      assist: "#e0e7ff"
 
   # ----------------------------------------------------------------------------
   # [Radiance] 流光溢彩 (allowCustomColor)
@@ -303,12 +303,12 @@ borderThemes:
     card: "bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-xl"
     content: "bg-transparent text-white"
     # Force white text
-    prose: "prose-invert prose-headings:text-white prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 prose-strong:text-teal-200 [&_td]:text-white/90 [&_th]:text-teal-200 [&_tr]:border-white/20"
+    prose: "prose-invert prose-headings:text-[var(--mp-primary-text)] prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 [&_td]:text-white/90 [&_th]:text-teal-200 [&_tr]:border-white/20"
     watermarkColor: "text-white/50"
     colors:
-      primary: "#2dd4bf"
-      secondary: "#60a5fa"
-      assist: "#a855f7"
+      primary: "#93c5fd"
+      secondary: "#a78bfa"
+      assist: "#99f6e4"
 
 # ==============================================================================
 # 2. 排版主题 (Layout Themes)
@@ -319,24 +319,28 @@ layoutThemes:
   # ----------------------------------------------------------------------------
   - id: "Base"
     name: "标准"
-    className: "font-sans prose-headings:font-bold prose-headings:border-none prose-blockquote:bg-gray-500/10 prose-blockquote:border-l-[3px] prose-blockquote:border-current prose-blockquote:opacity-90 prose-blockquote:not-italic prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:rounded-r-sm prose-strong:font-bold"
+    className: "font-sans prose-headings:font-bold prose-headings:text-[var(--mp-primary-text)] prose-headings:border-none prose-a:text-[var(--mp-secondary-text)] prose-blockquote:bg-[var(--mp-assist)]/22 prose-blockquote:border-l-[3px] prose-blockquote:border-[var(--mp-primary)] prose-blockquote:opacity-90 prose-blockquote:not-italic prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:rounded-r-sm prose-strong:font-bold"
 
   # ----------------------------------------------------------------------------
   # [Classic] 经典
   # ----------------------------------------------------------------------------
   - id: "Classic"
     name: "经典"
-    className: "font-serif prose-headings:font-bold prose-headings:border-none prose-strong:text-[var(--mp-primary)] prose-blockquote:bg-[var(--mp-assist)]/20 prose-blockquote:border-l-[3px] prose-blockquote:border-[var(--mp-primary)] prose-blockquote:not-italic prose-blockquote:px-4 prose-blockquote:py-1"
+    className: "font-serif prose-headings:font-bold prose-headings:text-[var(--mp-primary-text)] prose-headings:border-none prose-a:text-[var(--mp-secondary-text)] prose-strong:text-[var(--mp-primary)] prose-blockquote:bg-[var(--mp-assist)]/20 prose-blockquote:border-l-[3px] prose-blockquote:border-[var(--mp-primary)] prose-blockquote:not-italic prose-blockquote:px-4 prose-blockquote:py-1"
 
   # ----------------------------------------------------------------------------
-  # [Vibrant] 活泼
+  # [Marker] 标注
   # ----------------------------------------------------------------------------
-  - id: "Vibrant"
-    name: "活泼"
-    # Removed prose-headings:block to fix potential table layout issues
-    # Updated prose-strong to use Underline + Text Color instead of Background Highlight for better contrast and aesthetics
-    # Removed manual padding on th/td to allow natural table spacing
-    className: "font-sans tracking-wide prose-headings:text-[var(--mp-primary)] prose-h2:border-b-[3px] prose-h2:border-[var(--mp-secondary)] prose-h2:pb-2 prose-h2:mb-6 prose-strong:text-[var(--mp-secondary)] prose-strong:font-extrabold prose-strong:underline prose-strong:decoration-[var(--mp-assist)] prose-strong:decoration-4 prose-strong:underline-offset-4 prose-blockquote:bg-[var(--mp-assist)]/10 prose-blockquote:border-l-[5px] prose-blockquote:border-[var(--mp-secondary)] prose-blockquote:not-italic prose-blockquote:px-5 prose-blockquote:py-2 prose-th:text-[var(--mp-primary)] prose-th:border-b-2 prose-th:border-[var(--mp-secondary)]"
+  - id: "Marker"
+    name: "标注"
+    className: "mp-marker font-sans tracking-wide prose-headings:font-extrabold prose-headings:text-[var(--mp-primary-text)] prose-a:text-[var(--mp-secondary-text)] prose-blockquote:bg-[var(--mp-assist)]/18 prose-blockquote:border-l-[3px] prose-blockquote:border-[var(--mp-secondary)] prose-h2:border-none prose-strong:text-[var(--mp-secondary)]"
+
+  # ----------------------------------------------------------------------------
+  # [Ribbon] 强调
+  # ----------------------------------------------------------------------------
+  - id: "Ribbon"
+    name: "强调"
+    className: "mp-ribbon font-sans tracking-wide prose-headings:font-extrabold prose-headings:text-[var(--mp-primary-text)] prose-a:text-[var(--mp-secondary-text)] prose-blockquote:bg-[var(--mp-assist)]/16 prose-blockquote:border-l-[3px] prose-blockquote:border-[var(--mp-primary)] prose-h2:border-none prose-strong:text-[var(--mp-secondary)]"
 
 # ==============================================================================
 # 3. 字号设置 (Font Sizes)

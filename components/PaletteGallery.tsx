@@ -13,7 +13,7 @@ import { remarkRuby, remarkCenter } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { DEFAULT_MARKDOWN } from '../constants/defaultContent';
 
-const layoutOrder: LayoutTheme[] = ['Base', 'Classic', 'Vibrant'];
+const layoutOrder: LayoutTheme[] = ['Base', 'Classic', 'Marker', 'Ribbon'];
 
 export const PaletteGallery: React.FC = () => {
   const themes = ThemeRegistry.getBorderThemes();
@@ -25,11 +25,18 @@ export const PaletteGallery: React.FC = () => {
   const cards = useMemo(() => {
     return themes.flatMap(theme => {
       const themeStyle = getThemeStyles(theme.id);
+      const isDarkTheme = Boolean(themeStyle.isDark);
       const cssVariables = themeStyle.colors
         ? {
             '--mp-primary': themeStyle.colors.primary,
             '--mp-secondary': themeStyle.colors.secondary,
             '--mp-assist': themeStyle.colors.assist,
+            '--mp-primary-text': isDarkTheme
+              ? `color-mix(in srgb, ${themeStyle.colors.primary} 62%, white)`
+              : themeStyle.colors.primary,
+            '--mp-secondary-text': isDarkTheme
+              ? `color-mix(in srgb, ${themeStyle.colors.secondary} 70%, white)`
+              : themeStyle.colors.secondary,
           }
         : undefined;
 
@@ -56,7 +63,7 @@ export const PaletteGallery: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">Poster 主题配色速览（BorderTheme × LayoutTheme）</h1>
           <p className="text-sm text-gray-600 mt-2">
-            每个边框主题分别套用 Base / Classic / Vibrant 三种文字风格。固定：字号 Medium，边距 Medium，间距标准。
+            每个边框主题分别套用 Base / Classic / Marker / Ribbon 四种文字风格。固定：字号 Medium，边距 Medium，间距标准。
           </p>
         </div>
 
@@ -67,7 +74,9 @@ export const PaletteGallery: React.FC = () => {
               className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col"
             >
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between text-[11px] uppercase tracking-wide font-semibold text-gray-500">
-                <span className="truncate">{card.theme.name}</span>
+                <span className="truncate">
+                  {card.theme.name} <span className="text-gray-400 font-normal normal-case">({card.theme.id})</span>
+                </span>
                 <span className="text-gray-400">·</span>
                 <span className="truncate">{card.layoutName}</span>
               </div>
@@ -114,7 +123,7 @@ export const PaletteGallery: React.FC = () => {
                   </div>
 
                   <div className={`mt-3 text-center text-[10px] font-mono uppercase tracking-wide ${card.themeStyle.watermarkColor}`}>
-                    {card.theme.name} · {card.layoutId}
+                    {card.theme.name} ({card.theme.id}) · {card.layoutId}
                   </div>
                 </div>
               </div>

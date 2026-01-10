@@ -141,12 +141,16 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   const cssVariables = useMemo(() => {
       const colors = themeStyle.colors;
       if (!colors) return {};
+      const isDarkTheme = Boolean(themeStyle.isDark);
       return {
           '--mp-primary': colors.primary,
           '--mp-secondary': colors.secondary,
           '--mp-assist': colors.assist,
+          // Text-facing variants (so primary can remain "theme hue", while text stays readable)
+          '--mp-primary-text': isDarkTheme ? `color-mix(in srgb, ${colors.primary} 62%, white)` : colors.primary,
+          '--mp-secondary-text': isDarkTheme ? `color-mix(in srgb, ${colors.secondary} 70%, white)` : colors.secondary,
       } as React.CSSProperties;
-  }, [themeStyle.colors]);
+  }, [themeStyle.colors, themeStyle.isDark]);
 
   return (
     <div 

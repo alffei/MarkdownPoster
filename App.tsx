@@ -54,7 +54,9 @@ export default function App() {
   // 3. Layout Theme
   const [layoutTheme, setLayoutTheme] = useState<LayoutTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_LAYOUT_THEME);
-    return (saved as LayoutTheme) || defaults.layout;
+    const normalized = (saved as LayoutTheme) || defaults.layout;
+    // Migration: old "Vibrant" -> "Marker" (new text style system)
+    return normalized === 'Vibrant' ? 'Marker' : normalized;
   });
 
   // 3.1 Writing Theme (New)
