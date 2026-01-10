@@ -162,7 +162,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
         fontSize: 'Medium', 
         padding: 'Medium', 
         spacing: 'standard', 
-        customThemeColor: '#6366f1',
+        customThemeColor: '#0000FA',
         watermark: { show: true, align: WatermarkAlign.Right } 
     }
   },
@@ -177,7 +177,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
         fontSize: 'Medium', 
         padding: 'Medium', 
         spacing: 'loose', 
-        customThemeColor: '#14b8a6',
+        customThemeColor: '#111212',
         watermark: { show: true, align: WatermarkAlign.Right } 
     }
   }

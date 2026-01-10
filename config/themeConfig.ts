@@ -306,7 +306,7 @@ borderThemes:
     prose: "prose-invert prose-headings:text-[var(--mp-primary-text)] prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 [&_td]:text-white/90 [&_th]:text-teal-200 [&_tr]:border-white/20"
     watermarkColor: "text-white/50"
     colors:
-      primary: "#111212"![1768059156826](image/themeConfig/1768059156826.png)
+      primary: "#111212"
       secondary: "#a78bfa"
       assist: "#99f6e4"
 
