@@ -304,7 +304,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   const getSummaryString = () => {
     const layoutLabel = allLayouts.find(l => l.id === layoutTheme)?.name || layoutTheme;
     const spacingLabel = spacing === 'standard' ? '标准' : spacing === 'compact' ? '紧凑' : '宽松';
-    const sizeLabel = allFontSizes.find(s => s.id === fontSize)?.label || 'M';
+    const sizeLabel = allFontSizes.find(s => s.id === fontSize)?.label || '中';
     const padLabel = allPaddings.find(p => p.id === padding)?.label || '中';
     return `${layoutLabel} · ${spacingLabel} · ${sizeLabel} · ${padLabel}`;
   };
@@ -415,7 +415,10 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                      return (
                          <button
                             key={tpl.id}
-                            onClick={() => onApplyTemplate(tpl)}
+                            onClick={() => {
+                              onApplyTemplate(tpl);
+                              setIsFineTuningOpen(true);
+                            }}
                             className={`flex flex-col group text-left transition-all duration-200 ${isActive ? 'scale-105' : 'hover:scale-105'}`}
                             title={tpl.label}
                          >

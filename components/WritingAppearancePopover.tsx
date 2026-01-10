@@ -62,7 +62,7 @@ export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> =
 
       {/* Font Size */}
       <div className="mb-2">
-           <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">文字大小</label>
+           <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">字号</label>
            <div className={`flex p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
               {allFontSizes.map((option) => (
                 <button
@@ -75,7 +75,7 @@ export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> =
                   }`}
                   title={option.label}
                 >
-                  <span className={option.icon || 'text-sm'}>T</span>
+                  {option.label}
                 </button>
               ))}
            </div>

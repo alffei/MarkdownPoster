@@ -68,7 +68,9 @@ export default function App() {
   // 4. Font Size
   const [fontSize, setFontSize] = useState<FontSize>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_FONT_SIZE);
-    return (saved as FontSize) || defaults.fontSize;
+    const normalized = (saved as FontSize) || defaults.fontSize;
+    // Migration: old "XLarge" -> "Large" (font size simplified to 小/中/大)
+    return normalized === 'XLarge' ? 'Large' : normalized;
   });
 
   // 5. Padding (Now controls Frame Width)

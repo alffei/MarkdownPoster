@@ -15,7 +15,7 @@ export const WRITING_THEMES: WritingThemeDef[] = [
     name: "Dim Light",
     isDark: false,
     className: "bg-[#f3f4f6]",
-    prose: "prose-gray prose-lg text-[#374151]",
+    prose: "prose-gray text-[#374151]",
     preview: "bg-[#f3f4f6] border border-gray-200 text-[#374151]"
   },
 
@@ -25,7 +25,7 @@ export const WRITING_THEMES: WritingThemeDef[] = [
     name: "Solarized",
     isDark: false,
     className: "bg-[#fdf6e3]",
-    prose: "prose-lg text-[#657b83] prose-headings:text-[#b58900] prose-a:text-[#268bd2] prose-strong:text-[#cb4b16] prose-code:text-[#859900]",
+    prose: "text-[#657b83] prose-headings:text-[#b58900] prose-a:text-[#268bd2] prose-strong:text-[#cb4b16] prose-code:text-[#859900]",
     preview: "bg-[#fdf6e3] border border-[#eee8d5] text-[#b58900]"
   },
 
@@ -35,7 +35,7 @@ export const WRITING_THEMES: WritingThemeDef[] = [
     name: "Github Dark",
     isDark: true,
     className: "bg-[#0d1117]",
-    prose: "prose-invert prose-lg text-[#c9d1d9] prose-headings:text-[#f0f6fc] prose-a:text-[#58a6ff] prose-strong:text-[#c9d1d9]",
+    prose: "prose-invert text-[#c9d1d9] prose-headings:text-[#f0f6fc] prose-a:text-[#58a6ff] prose-strong:text-[#c9d1d9]",
     preview: "bg-[#0d1117] border border-[#30363d] text-[#f0f6fc]"
   },
 
@@ -45,7 +45,7 @@ export const WRITING_THEMES: WritingThemeDef[] = [
     name: "One Dark",
     isDark: true,
     className: "bg-[#282c34]",
-    prose: "prose-invert prose-lg text-[#abb2bf] prose-headings:text-[#e06c75] prose-a:text-[#61afef] prose-strong:text-[#d19a66]",
+    prose: "prose-invert text-[#abb2bf] prose-headings:text-[#e06c75] prose-a:text-[#61afef] prose-strong:text-[#d19a66]",
     preview: "bg-[#282c34] border border-[#3e4451] text-[#e06c75]"
   }
 ];

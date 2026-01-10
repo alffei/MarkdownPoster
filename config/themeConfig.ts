@@ -347,17 +347,14 @@ layoutThemes:
 # ==============================================================================
 fontSizes:
   - id: "Small"
-    label: "S"
+    label: "小"
     className: "prose-sm"
   - id: "Medium"
-    label: "M"
+    label: "中"
     className: "prose-base"
   - id: "Large"
-    label: "L"
+    label: "大"
     className: "prose-lg"
-  - id: "XLarge"
-    label: "XL"
-    className: "prose-xl"
 
 # ==============================================================================
 # 4. 边距设置 (Paddings)

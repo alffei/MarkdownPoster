@@ -44,7 +44,7 @@ export const WritingPreview: React.FC<WritingPreviewProps> = ({
   
   const proseClass = themeDef?.prose || (isDarkMode 
     ? 'prose-invert prose-p:text-[#abb2bf] prose-headings:text-[#d4cfbf] prose-a:text-[#61afef] prose-strong:text-[#d19a66] prose-code:text-[#98c379] prose-ul:text-[#abb2bf] prose-ol:text-[#abb2bf] prose-li:text-[#abb2bf] prose-th:text-[#abb2bf] prose-td:text-[#abb2bf] prose-blockquote:text-[#abb2bf] [&_.katex]:text-[#abb2bf] [&_.katex-html]:text-[#abb2bf] [&_.katex-display]:text-[#abb2bf] prose-tr:border-[#3e4451] prose-thead:border-[#3e4451]' 
-    : 'prose-slate prose-lg text-gray-800 prose-headings:text-gray-900');
+    : 'prose-slate text-gray-800 prose-headings:text-gray-900');
 
   return (
     <div 
