@@ -42,7 +42,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     features: ['Light', 'Minimal'],
     defaults: { 
         fontSize: 'Medium', 
-        padding: 'Wide', 
+        padding: 'Medium', 
         spacing: 'standard', 
         watermark: { show: true, align: WatermarkAlign.Right } 
     }
@@ -56,7 +56,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     features: ['Light', 'Minimal', 'Retro'],
     defaults: { 
         fontSize: 'Medium', 
-        padding: 'Wide', 
+        padding: 'Medium', 
         spacing: 'compact', 
         watermark: { show: true, align: WatermarkAlign.Right } 
     }
@@ -70,7 +70,7 @@ export const POSTER_TEMPLATES: PosterTemplate[] = [
     features: ['Light', 'Retro'],
     defaults: { 
         fontSize: 'Medium', 
-        padding: 'Wide', 
+        padding: 'Medium', 
         spacing: 'loose', 
         watermark: { show: true, align: WatermarkAlign.Right } 
     }

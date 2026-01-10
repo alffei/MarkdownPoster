@@ -117,8 +117,8 @@ export default function App() {
   // 8. View Mode (Poster vs Writing vs WeChat)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
-    // Default to Poster (Border Mode) to immediately show the frame effect
-    return (saved as ViewMode) || ViewMode.Poster;
+    // Default to Writing (Reading Mode) for first-time open; Poster is a secondary step.
+    return (saved as ViewMode) || ViewMode.Writing;
   });
   
   // 9. WeChat Config

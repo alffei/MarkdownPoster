@@ -13,7 +13,7 @@ export const THEME_CONFIG_YAML = `
 # 当用户第一次打开应用或重置时使用的值
 # ==============================================================================
 defaults:
-  theme: "Elegant"   # 默认边框主题 ID
+  theme: "MacOS"     # 默认边框主题 ID
   layout: "Base"     # 默认排版主题 ID
   writingTheme: "${DEFAULT_WRITING_THEME_ID}" # 默认写作/阅读主题 ID
   fontSize: "Medium" # 默认字号 ID
@@ -306,7 +306,7 @@ borderThemes:
     prose: "prose-invert prose-headings:text-[var(--mp-primary-text)] prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 [&_td]:text-white/90 [&_th]:text-teal-200 [&_tr]:border-white/20"
     watermarkColor: "text-white/50"
     colors:
-      primary: "#111212"
+      primary: "#111212"![1768059156826](image/themeConfig/1768059156826.png)
       secondary: "#a78bfa"
       assist: "#99f6e4"
 
