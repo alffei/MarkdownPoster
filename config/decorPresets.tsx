@@ -59,13 +59,13 @@ export const DECOR_PRESETS: Record<string, React.ReactNode> = {
   'report-brackets': (
     <>
       {/* Top Left */}
-      <div className="absolute top-5 left-5 w-12 h-12 border-l-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
+      <div className="absolute -top-px -left-px w-8 h-8 border-l-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
       {/* Top Right */}
-      <div className="absolute top-5 right-5 w-12 h-12 border-r-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
+      <div className="absolute -top-px -right-px w-8 h-8 border-r-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
       {/* Bottom Left */}
-      <div className="absolute bottom-5 left-5 w-12 h-12 border-l-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
+      <div className="absolute -bottom-px -left-px w-8 h-8 border-l-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
       {/* Bottom Right */}
-      <div className="absolute bottom-5 right-5 w-12 h-12 border-r-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
+      <div className="absolute -bottom-px -right-px w-8 h-8 border-r-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
     </>
   )
 };
