@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
+import 'katex/dist/katex.min.css';
+import './katex-overrides.css';
 import App from './App';
 import { PaletteGallery } from './components/PaletteGallery';
 

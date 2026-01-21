@@ -1,0 +1,19 @@
+/*
+  KaTeX Overrides
+  Force left alignment for block formulas (katex-display) to match standard Markdown note aesthetics.
+*/
+.katex-display {
+  text-align: left !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.katex-display > .katex {
+  text-align: left !important;
+}
+.katex-display > .katex > .katex-html {
+  text-align: left !important;
+}
+

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ViewMode } from '../types';
+import logoUrl from '../assets/logo.png';
 
 interface ToolbarProps {
   isDarkMode: boolean;
@@ -30,7 +31,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <img 
             alt="RenRen AI Club" 
             className={`h-10 w-auto object-contain drop-shadow-sm transition-all duration-500 ${isDarkMode ? 'brightness-0 invert opacity-60' : ''}`}
-            src="https://s2.loli.net/2025/12/16/cxVD2oCAQJ45EMl.png" 
+            src={logoUrl} 
           />
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-6">
             <span className={`text-xl font-bold tracking-tight font-sans transition-colors duration-500 ${isDarkMode ? 'text-[#d4cfbf]' : 'text-gray-900'}`}>
