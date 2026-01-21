@@ -30,9 +30,34 @@ const STORAGE_KEY_IMAGE_POOL = 'markdown_poster_image_pool';
 const STORAGE_KEY_WECHAT_CONFIG = 'markdown_poster_wechat_config_v2'; 
 const STORAGE_KEY_CUSTOM_COLOR = 'markdown_poster_custom_color';
 const STORAGE_KEY_VIEW_MODE = 'markdown_poster_view_mode';
+const STORAGE_KEY_POSTER_TEMPLATE_ID = 'markdown_poster_active_template_id';
+const STORAGE_KEY_POSTER_TEMPLATE_TWEAKS = 'markdown_poster_template_tweaks_v1';
 
 // Max History Steps
 const MAX_HISTORY_SIZE = 10;
+
+type PosterTweaksSnapshot = {
+  theme: BorderTheme;
+  layoutTheme: LayoutTheme;
+  fontSize: FontSize;
+  padding: PaddingSize;
+  spacing: SpacingLevel;
+  showWatermark: boolean;
+  watermarkText: string;
+  watermarkAlign: WatermarkAlign;
+  customThemeColor: string;
+};
+
+const makeThemeTweaksKey = (themeId: BorderTheme) => `theme:${themeId}`;
+
+const loadPosterTemplateTweaks = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_POSTER_TEMPLATE_TWEAKS);
+    return raw ? (JSON.parse(raw) as Record<string, PosterTweaksSnapshot>) : {};
+  } catch {
+    return {};
+  }
+};
 
 export default function App() {
   const defaults = ThemeRegistry.getDefaults();
@@ -179,6 +204,13 @@ export default function App() {
 
   // 12. Modal State
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+
+  // 13. Active Poster Template + per-template tweaks
+  const [activePosterTemplateId, setActivePosterTemplateId] = useState<string>(() => {
+    return localStorage.getItem(STORAGE_KEY_POSTER_TEMPLATE_ID) || '';
+  });
+  const posterTemplateTweaksRef = useRef<Record<string, PosterTweaksSnapshot>>(loadPosterTemplateTweaks());
+  const isApplyingTemplateRef = useRef(false);
   
   // --- PERSISTENCE EFFECTS ---
   
@@ -239,6 +271,49 @@ export default function App() {
   }, [customThemeColor]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_POSTER_TEMPLATE_ID, activePosterTemplateId);
+  }, [activePosterTemplateId]);
+
+  // Keep the current poster tweaks snapshot updated for the active theme/template (poster mode only)
+  useEffect(() => {
+    if (viewMode !== ViewMode.Poster) return;
+    if (isApplyingTemplateRef.current) return;
+
+    const snapshot: PosterTweaksSnapshot = {
+      theme,
+      layoutTheme,
+      fontSize,
+      padding,
+      spacing,
+      showWatermark,
+      watermarkText,
+      watermarkAlign,
+      customThemeColor
+    };
+
+    const map = posterTemplateTweaksRef.current;
+    if (activePosterTemplateId) map[activePosterTemplateId] = snapshot;
+    map[makeThemeTweaksKey(theme)] = snapshot;
+    try {
+      localStorage.setItem(STORAGE_KEY_POSTER_TEMPLATE_TWEAKS, JSON.stringify(map));
+    } catch (e) {
+      console.warn('Failed to persist poster template tweaks', e);
+    }
+  }, [
+    viewMode,
+    activePosterTemplateId,
+    theme,
+    layoutTheme,
+    fontSize,
+    padding,
+    spacing,
+    showWatermark,
+    watermarkText,
+    watermarkAlign,
+    customThemeColor
+  ]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_IMAGE_POOL, JSON.stringify(imagePool));
     } catch (e) {
@@ -274,23 +349,152 @@ export default function App() {
   const { isCopyingWeChat, handleCopyHtml } = useWeChatExport({ weChatRef });
   const { isExportingZip, handleExportZip, handleDownloadMarkdown } = useProjectExport({ markdown, imagePool });
 
+  const getCurrentPosterTweaksKey = useCallback(() => {
+    if (activePosterTemplateId) return activePosterTemplateId;
+    const tpl = ThemeRegistry.getTemplates().find(t => t.borderThemeId === theme);
+    return tpl?.id || makeThemeTweaksKey(theme);
+  }, [activePosterTemplateId, theme]);
+
+  const persistCurrentPosterTweaks = useCallback(() => {
+    const snapshot: PosterTweaksSnapshot = {
+      theme,
+      layoutTheme,
+      fontSize,
+      padding,
+      spacing,
+      showWatermark,
+      watermarkText,
+      watermarkAlign,
+      customThemeColor
+    };
+
+    const map = posterTemplateTweaksRef.current;
+    const key = getCurrentPosterTweaksKey();
+    map[key] = snapshot;
+    map[makeThemeTweaksKey(theme)] = snapshot;
+    try {
+      localStorage.setItem(STORAGE_KEY_POSTER_TEMPLATE_TWEAKS, JSON.stringify(map));
+    } catch (e) {
+      console.warn('Failed to persist poster template tweaks', e);
+    }
+  }, [
+    getCurrentPosterTweaksKey,
+    theme,
+    layoutTheme,
+    fontSize,
+    padding,
+    spacing,
+    showWatermark,
+    watermarkText,
+    watermarkAlign,
+    customThemeColor
+  ]);
+
+  const applyPosterTweaksSnapshot = useCallback((snapshot: PosterTweaksSnapshot) => {
+    setTheme(snapshot.theme);
+    setLayoutTheme(snapshot.layoutTheme);
+    setFontSize(snapshot.fontSize);
+    setPadding(snapshot.padding);
+    setSpacing(snapshot.spacing);
+    setShowWatermark(snapshot.showWatermark);
+    setWatermarkText(snapshot.watermarkText);
+    setWatermarkAlign(snapshot.watermarkAlign);
+    setCustomThemeColor(snapshot.customThemeColor);
+  }, []);
+
+  const handleRestorePosterTemplateDefaults = useCallback(() => {
+    const allTemplates = ThemeRegistry.getTemplates();
+    const tpl =
+      (activePosterTemplateId ? allTemplates.find(t => t.id === activePosterTemplateId) : undefined) ||
+      allTemplates.find(t => t.borderThemeId === theme && t.layoutThemeId === layoutTheme) ||
+      allTemplates.find(t => t.borderThemeId === theme);
+
+    if (!tpl) return;
+
+    // Clear saved tweaks for this template/theme so we truly revert.
+    const map = posterTemplateTweaksRef.current;
+    delete map[tpl.id];
+    delete map[makeThemeTweaksKey(tpl.borderThemeId)];
+    try {
+      localStorage.setItem(STORAGE_KEY_POSTER_TEMPLATE_TWEAKS, JSON.stringify(map));
+    } catch (e) {
+      console.warn('Failed to persist poster template tweaks', e);
+    }
+
+    isApplyingTemplateRef.current = true;
+    try {
+      setActivePosterTemplateId(tpl.id);
+      setTheme(tpl.borderThemeId);
+      setLayoutTheme(tpl.layoutThemeId);
+      setFontSize(tpl.defaults.fontSize);
+      setPadding(tpl.defaults.padding);
+      setSpacing(tpl.defaults.spacing);
+      setShowWatermark(tpl.defaults.watermark.show);
+      setWatermarkAlign(tpl.defaults.watermark.align);
+      setWatermarkText(tpl.defaults.watermark.text || defaults.watermark.text);
+      if (tpl.defaults.customThemeColor) {
+        setCustomThemeColor(tpl.defaults.customThemeColor);
+      }
+    } finally {
+      queueMicrotask(() => {
+        isApplyingTemplateRef.current = false;
+      });
+    }
+  }, [activePosterTemplateId, theme, layoutTheme, defaults.watermark.text]);
+
   // --- TEMPLATE LOGIC ---
   const handleApplyTemplate = useCallback((tpl: PosterTemplate) => {
-    setTheme(tpl.borderThemeId);
-    setLayoutTheme(tpl.layoutThemeId);
-    setFontSize(tpl.defaults.fontSize);
-    setPadding(tpl.defaults.padding);
-    setSpacing(tpl.defaults.spacing);
-    setShowWatermark(tpl.defaults.watermark.show);
-    setWatermarkAlign(tpl.defaults.watermark.align);
-    if (tpl.defaults.watermark.text) {
+    // Save current tweaks before switching away
+    persistCurrentPosterTweaks();
+
+    const map = posterTemplateTweaksRef.current;
+    const saved =
+      map[tpl.id] ||
+      map[makeThemeTweaksKey(tpl.borderThemeId)];
+
+    isApplyingTemplateRef.current = true;
+    try {
+      setActivePosterTemplateId(tpl.id);
+
+      // If we have a saved snapshot for this template/theme, restore it;
+      // otherwise fall back to template defaults.
+      if (saved) {
+        applyPosterTweaksSnapshot({
+          ...saved,
+          theme: tpl.borderThemeId
+        });
+        return;
+      }
+
+      setTheme(tpl.borderThemeId);
+      setLayoutTheme(tpl.layoutThemeId);
+      setFontSize(tpl.defaults.fontSize);
+      setPadding(tpl.defaults.padding);
+      setSpacing(tpl.defaults.spacing);
+      setShowWatermark(tpl.defaults.watermark.show);
+      setWatermarkAlign(tpl.defaults.watermark.align);
+      if (tpl.defaults.watermark.text) {
         setWatermarkText(tpl.defaults.watermark.text);
-    }
-    // Apply default custom color if present in template
-    if (tpl.defaults.customThemeColor) {
+      }
+      if (tpl.defaults.customThemeColor) {
         setCustomThemeColor(tpl.defaults.customThemeColor);
+      }
+    } finally {
+      // Allow persistence again on next render tick
+      queueMicrotask(() => {
+        isApplyingTemplateRef.current = false;
+      });
     }
-  }, []);
+  }, [applyPosterTweaksSnapshot, persistCurrentPosterTweaks]);
+
+  // If we loaded from localStorage without an active template id, infer a reasonable default
+  useEffect(() => {
+    if (activePosterTemplateId) return;
+    const tpl =
+      ThemeRegistry.getTemplates().find(t => t.borderThemeId === theme && t.layoutThemeId === layoutTheme) ||
+      ThemeRegistry.getTemplates().find(t => t.borderThemeId === theme);
+    if (tpl) setActivePosterTemplateId(tpl.id);
+  }, [activePosterTemplateId, theme, layoutTheme]);
 
   // --- SCROLL SYNCHRONIZATION ---
   const handleEditorScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -908,6 +1112,7 @@ export default function App() {
             setWritingTheme={setWritingTheme}
 
             onApplyTemplate={handleApplyTemplate}
+            onRestorePosterTemplateDefaults={handleRestorePosterTemplateDefaults}
           />
           
           <div className="relative flex-1 min-h-0 overflow-hidden">

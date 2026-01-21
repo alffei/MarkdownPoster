@@ -30,6 +30,9 @@ interface AppearancePopoverProps {
 
   // New template handler
   onApplyTemplate: (template: PosterTemplate) => void;
+
+  // Restore current template defaults (preferred, so App can clear cached tweaks)
+  onRestoreTemplateDefaults?: () => void;
 }
 
 const ScenarioOptions = [
@@ -250,7 +253,8 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   onClose,
   customThemeColor,
   setCustomThemeColor,
-  onApplyTemplate
+  onApplyTemplate,
+  onRestoreTemplateDefaults
 }) => {
   // --- Data Loading ---
   const allLayouts = ThemeRegistry.getLayoutThemes();
@@ -289,15 +293,22 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   }, [allTemplates, activeScenario, activeFeature]);
 
   const handleRestoreDefaults = () => {
-      const tpl = allTemplates.find(t => t.borderThemeId === currentTheme);
-      if (tpl) {
-          setFontSize(tpl.defaults.fontSize);
-          setPadding(tpl.defaults.padding);
-          setSpacing(tpl.defaults.spacing);
-          setShowWatermark(tpl.defaults.watermark.show);
-          setWatermarkAlign(tpl.defaults.watermark.align);
-          if (tpl.defaults.watermark.text) setWatermarkText(tpl.defaults.watermark.text);
-      }
+    if (onRestoreTemplateDefaults) {
+      onRestoreTemplateDefaults();
+      return;
+    }
+    const tpl = allTemplates.find(t => t.borderThemeId === currentTheme);
+    if (tpl) {
+      setTheme(tpl.borderThemeId);
+      setLayoutTheme(tpl.layoutThemeId);
+      setFontSize(tpl.defaults.fontSize);
+      setPadding(tpl.defaults.padding);
+      setSpacing(tpl.defaults.spacing);
+      setShowWatermark(tpl.defaults.watermark.show);
+      setWatermarkAlign(tpl.defaults.watermark.align);
+      if (tpl.defaults.watermark.text) setWatermarkText(tpl.defaults.watermark.text);
+      if (tpl.defaults.customThemeColor && setCustomThemeColor) setCustomThemeColor(tpl.defaults.customThemeColor);
+    }
   };
   
   // Generate summary string for fine-tuning header

@@ -297,7 +297,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
 
                                 <div className={`
                                     flex-1
-                                    px-8 py-8 sm:px-12 sm:py-10
+                                    px-8 py-10 sm:px-12 sm:py-12
                                     ${themeStyle.content}
                                     ${layoutClass}
                                 `}>

@@ -180,3 +180,10 @@ rt {
   line-height: 1;
 }
 
+/* Fix: avoid extra bottom/top gap inside :::center blocks (nested last-child margins) */
+.prose .center-aligned-block > :first-child {
+  margin-top: 0;
+}
+.prose .center-aligned-block > :last-child {
+  margin-bottom: 0;
+}

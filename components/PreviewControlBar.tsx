@@ -51,6 +51,9 @@ interface PreviewControlBarProps {
 
   // Template Handler
   onApplyTemplate?: (template: PosterTemplate) => void;
+
+  // Restore active template defaults (and clear cached tweaks)
+  onRestorePosterTemplateDefaults?: () => void;
 }
 
 interface NotificationState {
@@ -92,7 +95,8 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
   setCustomThemeColor,
   writingTheme,
   setWritingTheme,
-  onApplyTemplate
+  onApplyTemplate,
+  onRestorePosterTemplateDefaults
 }) => {
   const [showAppearance, setShowAppearance] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
@@ -216,6 +220,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         customThemeColor={customThemeColor}
                         setCustomThemeColor={setCustomThemeColor}
                         onApplyTemplate={onApplyTemplate}
+                        onRestoreTemplateDefaults={onRestorePosterTemplateDefaults}
                     />
                 )}
 
