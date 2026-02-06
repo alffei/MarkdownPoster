@@ -6,6 +6,7 @@ import { PosterPreview } from './components/PosterPreview';
 import { WritingPreview } from './components/WritingPreview';
 import { WeChatPreview } from './components/WeChatPreview';
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { ContentTemplatePopover, TemplateApplyMode } from './components/ContentTemplatePopover';
 import { BorderTheme, FontSize, ViewMode, LayoutTheme, PaddingSize, WatermarkAlign, WeChatConfig, WritingTheme, SpacingLevel, PosterTemplate } from './types';
 import { cleanImagePool, compressImage } from './utils/imageUtils';
 import { DEFAULT_MARKDOWN } from './constants/defaultContent';
@@ -13,6 +14,7 @@ import { usePosterExport } from './hooks/usePosterExport';
 import { useWeChatExport } from './hooks/useWeChatExport';
 import { useProjectExport } from './hooks/useProjectExport';
 import { ThemeRegistry } from './utils/themeRegistry';
+import { repairMarkdownBlock } from './utils/markdownRepair';
 
 // LocalStorage Keys
 const STORAGE_KEY_MARKDOWN = 'markdown_poster_draft';
@@ -49,6 +51,13 @@ type PosterTweaksSnapshot = {
 };
 
 const makeThemeTweaksKey = (themeId: BorderTheme) => `theme:${themeId}`;
+
+type TemplateContext = {
+  sourceText: string;
+  hasSelection: boolean;
+  selectionStart: number;
+  selectionEnd: number;
+};
 
 const loadPosterTemplateTweaks = () => {
   try {
@@ -329,6 +338,15 @@ export default function App() {
   const exportRef = useRef<HTMLDivElement>(null);
   const weChatRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isTemplatePopoverOpen, setIsTemplatePopoverOpen] = useState(false);
+  const templatePopoverRef = useRef<HTMLDivElement>(null);
+  const [templateContext, setTemplateContext] = useState<TemplateContext>({
+    sourceText: '',
+    hasSelection: false,
+    selectionStart: 0,
+    selectionEnd: 0
+  });
+  const [repairNotice, setRepairNotice] = useState<{ message: string; id: number } | null>(null);
   
   const posterScrollRef = useRef<HTMLDivElement>(null);
   const writingScrollRef = useRef<HTMLDivElement>(null);
@@ -597,6 +615,77 @@ export default function App() {
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
   };
 
+  const openTemplatePopover = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setTemplateContext({
+        sourceText: markdown,
+        hasSelection: false,
+        selectionStart: 0,
+        selectionEnd: 0
+      });
+    } else {
+      const { selectionStart, selectionEnd, value } = textarea;
+      const hasSelection = selectionStart !== selectionEnd;
+      const sourceText = hasSelection ? value.substring(selectionStart, selectionEnd) : value;
+      setTemplateContext({
+        sourceText,
+        hasSelection,
+        selectionStart,
+        selectionEnd
+      });
+    }
+    setIsTemplatePopoverOpen(true);
+  };
+
+  const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode) => {
+    if (!result.trim()) return;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const currentValue = textarea.value;
+    const { hasSelection, selectionStart, selectionEnd } = templateContext;
+    let newText = currentValue;
+    let newSelectionStart = selectionStart;
+    let newSelectionEnd = selectionStart;
+
+    if (mode === 'replace') {
+      if (hasSelection) {
+        newText = currentValue.slice(0, selectionStart) + result + currentValue.slice(selectionEnd);
+        newSelectionStart = selectionStart;
+        newSelectionEnd = selectionStart + result.length;
+      } else {
+        newText = result;
+        newSelectionStart = 0;
+        newSelectionEnd = result.length;
+      }
+    }
+
+    if (mode === 'insert') {
+      const insertPos = hasSelection ? selectionEnd : selectionStart;
+      newText = currentValue.slice(0, insertPos) + result + currentValue.slice(insertPos);
+      newSelectionStart = insertPos;
+      newSelectionEnd = insertPos + result.length;
+    }
+
+    if (mode === 'append') {
+      const needsGap = currentValue.trim().length > 0;
+      const spacer = needsGap ? (currentValue.endsWith('\n') ? '\n' : '\n\n') : '';
+      newText = currentValue + spacer + result;
+      newSelectionStart = newText.length - result.length;
+      newSelectionEnd = newText.length;
+    }
+
+    updateMarkdownImmediate(newText);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus({ preventScroll: true });
+        textareaRef.current.setSelectionRange(newSelectionStart, newSelectionEnd);
+      }
+    });
+    setIsTemplatePopoverOpen(false);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
       e.preventDefault(); 
@@ -787,6 +876,47 @@ export default function App() {
     });
   };
 
+  const handleRepair = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const { selectionStart, selectionEnd, value } = textarea;
+    const hasSelection = selectionStart !== selectionEnd;
+    const { start, end } = hasSelection
+      ? getLineSelectionRange(value, selectionStart, selectionEnd)
+      : { start: 0, end: value.length };
+
+    const targetText = value.substring(start, end);
+    const { output, changes } = repairMarkdownBlock(targetText);
+
+    if (output === targetText) {
+      setRepairNotice({ message: '未发现需要修复的内容', id: Date.now() });
+      return;
+    }
+
+    const newValue = value.substring(0, start) + output + value.substring(end);
+    const delta = output.length - targetText.length;
+    const adjustPosition = (pos: number) => {
+      if (pos <= start) return pos;
+      if (pos >= end) return pos + delta;
+      const relative = pos - start;
+      return start + Math.min(relative, output.length);
+    };
+
+    const nextSelectionStart = adjustPosition(selectionStart);
+    const nextSelectionEnd = adjustPosition(selectionEnd);
+
+    updateMarkdownImmediate(newValue);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus({ preventScroll: true });
+        textareaRef.current.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+      }
+    });
+    const changeCount = changes > 0 ? changes : 1;
+    setRepairNotice({ message: `已修复 ${changeCount} 处`, id: Date.now() });
+  };
+
   // --- IMAGE HANDLER ---
   const processImageFile = async (file: File) => {
     try {
@@ -898,6 +1028,24 @@ export default function App() {
   
   useEffect(() => () => stopScrolling(), [stopScrolling]);
 
+  useEffect(() => {
+    if (!repairNotice) return;
+    const timer = setTimeout(() => setRepairNotice(null), 2000);
+    return () => clearTimeout(timer);
+  }, [repairNotice]);
+
+  useEffect(() => {
+    if (!isTemplatePopoverOpen) return;
+    const handleMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (templatePopoverRef.current && !templatePopoverRef.current.contains(target)) {
+        setIsTemplatePopoverOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [isTemplatePopoverOpen]);
+
   return (
     <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#23272e]' : 'bg-white'}`}>
       
@@ -920,6 +1068,16 @@ export default function App() {
             ${isDarkMode ? 'bg-[#23272e] shadow-none' : 'bg-[#fdfcf5] border-r border-[#e0e0e0] shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
           `}
         >
+          {repairNotice && (
+            <div
+              key={repairNotice.id}
+              className={`absolute right-6 top-14 z-30 px-3 py-1.5 rounded-md text-[11px] font-semibold shadow-md pointer-events-none ${
+                isDarkMode ? 'bg-[#2c313a] text-[#e5c07b]' : 'bg-white text-[#8b7e74] border border-[#e8e6df]'
+              }`}
+            >
+              {repairNotice.message}
+            </div>
+          )}
           {/* Editor Header (Two Rows) */}
           <div className="flex flex-col relative z-20 transition-colors duration-500 group/toolbar">
              
@@ -940,6 +1098,23 @@ export default function App() {
                         <button type="button" onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 ${historyIndex < history.length - 1 ? (isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]') : 'text-gray-300/20 cursor-not-allowed'}`} title="重做 (Ctrl+Shift+Z)"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
                     </div>
                     <div className={`w-px h-3 mx-1 transition-colors ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300'}`}></div>
+                    <div ref={templatePopoverRef} className="relative">
+                      <button onClick={openTemplatePopover} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="智能排版">
+                        <svg className="w-3.5 h-3.5 text-[#e5c07b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l1.5 3L10 7.5 6.5 9 5 12.5 3.5 9 0 7.5 3.5 6zM14 7l2.5 5 5 2.5-5 2.5L14 22l-2.5-5-5-2.5 5-2.5zM9 12l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /></svg>
+                        <span className="hidden xl:inline">智能</span>
+                      </button>
+                      {isTemplatePopoverOpen && (
+                        <div className="absolute left-0 top-full mt-2 z-50">
+                          <ContentTemplatePopover
+                            isDarkMode={isDarkMode}
+                            sourceText={templateContext.sourceText}
+                            hasSelection={templateContext.hasSelection}
+                            onApply={handleApplyTemplateResult}
+                            onClose={() => setIsTemplatePopoverOpen(false)}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <button onClick={handleSelectAll} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="全选"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg><span className="hidden xl:inline">全选</span></button>
                         <button onClick={handleCopySelection} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="复制选中内容"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg><span className="hidden xl:inline">复制</span></button>
@@ -1024,6 +1199,22 @@ export default function App() {
                                     <option value="5x5">5 行 x 5 列</option>
                                 </select>
                         </div>
+
+                        <div className={`w-px h-3 mx-1 flex-shrink-0 transition-colors ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300'}`}></div>
+
+                        <button
+                          onClick={handleRepair}
+                          className={`p-1.5 rounded transition-colors flex-shrink-0 ${
+                            isDarkMode
+                              ? 'text-[#e5c07b] hover:bg-[#3e4451]'
+                              : 'text-[#c28c2c] hover:bg-[#f4ecd9]'
+                          }`}
+                          title="修理 Markdown 格式"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14.7 6.3a4 4 0 0 0-5.66 5.66l-6.1 6.1a2 2 0 1 0 2.83 2.83l6.1-6.1a4 4 0 0 0 5.66-5.66l-2.12 2.12a1.5 1.5 0 0 1-2.12-2.12z" />
+                          </svg>
+                        </button>
                     </div>
 
                     <div className={`absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center w-6 transition-opacity duration-300 pointer-events-none ${formatCanScrollRight ? 'opacity-100' : 'opacity-0'}`}>

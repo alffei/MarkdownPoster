@@ -96,5 +96,7 @@ export enum AiAction {
   SUMMARIZE = 'Summarize',
   EXPAND = 'Expand Text',
   TRANSLATE_EN = 'Translate to English',
-  TRANSLATE_CN = 'Translate to Chinese'
+  TRANSLATE_CN = 'Translate to Chinese',
+  SEMANTIC_FORMAT = 'Semantic Formatting',
+  EVENT_POSTER = 'Event Poster'
 }

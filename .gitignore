@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
 docs
 .vite
 image
@@ -25,4 +27,3 @@ image
 *.njsproj
 *.sln
 *.sw?
-
