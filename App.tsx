@@ -6,7 +6,7 @@ import { PosterPreview } from './components/PosterPreview';
 import { WritingPreview } from './components/WritingPreview';
 import { WeChatPreview } from './components/WeChatPreview';
 import { ConfirmationModal } from './components/ConfirmationModal';
-import { ContentTemplatePopover, TemplateApplyMode } from './components/ContentTemplatePopover';
+import { ContentTemplatePopover, TemplateApplyMode, TemplateApplyOptions, TemplateKind } from './components/ContentTemplatePopover';
 import { BorderTheme, FontSize, ViewMode, LayoutTheme, PaddingSize, WatermarkAlign, WeChatConfig, WritingTheme, SpacingLevel, PosterTemplate } from './types';
 import { cleanImagePool, compressImage } from './utils/imageUtils';
 import { DEFAULT_MARKDOWN } from './constants/defaultContent';
@@ -34,9 +34,11 @@ const STORAGE_KEY_CUSTOM_COLOR = 'markdown_poster_custom_color';
 const STORAGE_KEY_VIEW_MODE = 'markdown_poster_view_mode';
 const STORAGE_KEY_POSTER_TEMPLATE_ID = 'markdown_poster_active_template_id';
 const STORAGE_KEY_POSTER_TEMPLATE_TWEAKS = 'markdown_poster_template_tweaks_v1';
+const STORAGE_KEY_POSTER_WIDTH = 'markdown_poster_width';
 
 // Max History Steps
 const MAX_HISTORY_SIZE = 10;
+const POEM_CORE_CONTENT_WIDTH = 180;
 
 type PosterTweaksSnapshot = {
   theme: BorderTheme;
@@ -333,13 +335,34 @@ export default function App() {
   // ---------------------------
 
   const [leftWidth, setLeftWidth] = useState(50); 
+  const [posterWidthPreset, setPosterWidthPreset] = useState<number | undefined>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_POSTER_WIDTH);
+    if (!saved) return undefined;
+    const parsed = Number(saved);
+    if (!Number.isFinite(parsed)) return undefined;
+    return Math.max(320, Math.min(2000, Math.round(parsed)));
+  });
+  const [posterWidthPresetToken, setPosterWidthPresetToken] = useState(0);
+  const [posterCoreWidthPreset, setPosterCoreWidthPreset] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof posterWidthPreset === 'number' && Number.isFinite(posterWidthPreset)) {
+      localStorage.setItem(STORAGE_KEY_POSTER_WIDTH, String(Math.round(posterWidthPreset)));
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEY_POSTER_WIDTH);
+  }, [posterWidthPreset]);
   
   // Refs
   const exportRef = useRef<HTMLDivElement>(null);
   const weChatRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorPanelRef = useRef<HTMLDivElement>(null);
   const [isTemplatePopoverOpen, setIsTemplatePopoverOpen] = useState(false);
-  const templatePopoverRef = useRef<HTMLDivElement>(null);
+  const [smartPanelTemplate, setSmartPanelTemplate] = useState<TemplateKind>('semantic');
+  const [smartPanelPosition, setSmartPanelPosition] = useState({ x: 140, y: 40 });
+  const [isDraggingSmartPanel, setIsDraggingSmartPanel] = useState(false);
+  const smartPanelDragOffsetRef = useRef({ x: 0, y: 0 });
   const [templateContext, setTemplateContext] = useState<TemplateContext>({
     sourceText: '',
     hasSelection: false,
@@ -615,7 +638,7 @@ export default function App() {
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
   };
 
-  const openTemplatePopover = () => {
+  const openTemplatePopover = (template: TemplateKind = 'semantic') => {
     const textarea = textareaRef.current;
     if (!textarea) {
       setTemplateContext({
@@ -635,10 +658,18 @@ export default function App() {
         selectionEnd
       });
     }
+    setSmartPanelTemplate(template);
+    const panelRect = editorPanelRef.current?.getBoundingClientRect();
+    if (panelRect) {
+      setSmartPanelPosition({
+        x: Math.round(panelRect.left + 120),
+        y: Math.round(panelRect.top + 4),
+      });
+    }
     setIsTemplatePopoverOpen(true);
   };
 
-  const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode) => {
+  const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => {
     if (!result.trim()) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -683,8 +714,75 @@ export default function App() {
         textareaRef.current.setSelectionRange(newSelectionStart, newSelectionEnd);
       }
     });
+
+    const poemSourceMatched = options?.sourceTemplate === 'poem' || smartPanelTemplate === 'poem';
+    const shouldApplyPoemPreset = poemSourceMatched && mode !== 'append';
+    if (shouldApplyPoemPreset) {
+      const poemTemplate =
+        ThemeRegistry.getTemplates().find(t => t.id === 'tpl_minimal_std') ||
+        ThemeRegistry.getTemplates().find(t => t.borderThemeId === 'Minimal' && t.layoutThemeId === 'Classic');
+
+      if (poemTemplate) {
+        handleApplyTemplate(poemTemplate);
+      } else {
+        setTheme('Minimal');
+        setLayoutTheme('Classic');
+      }
+
+      setViewMode(ViewMode.Poster);
+      setFontSize('Large');
+      setPadding('Wide');
+      setSpacing('loose');
+      setShowWatermark(true);
+      setWatermarkAlign(WatermarkAlign.Center);
+      if (options?.poemAttribution?.trim()) {
+        setWatermarkText(options.poemAttribution.trim());
+      } else {
+        setWatermarkText('（待补充诗名） - （待补充作者）');
+      }
+      setPosterCoreWidthPreset(POEM_CORE_CONTENT_WIDTH);
+      setPosterWidthPreset(undefined);
+      setPosterWidthPresetToken(prev => prev + 1);
+    }
+
     setIsTemplatePopoverOpen(false);
   };
+
+  const startSmartPanelDrag = (event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    smartPanelDragOffsetRef.current = {
+      x: event.clientX - smartPanelPosition.x,
+      y: event.clientY - smartPanelPosition.y,
+    };
+    setIsDraggingSmartPanel(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSmartPanel) return;
+    const handleMouseMove = (event: MouseEvent) => {
+      const panelWidth = 560;
+      const panelHeight = 520;
+      const minX = 8;
+      const minY = 8;
+      const maxX = Math.max(minX, window.innerWidth - panelWidth - 8);
+      const maxY = Math.max(minY, window.innerHeight - panelHeight - 8);
+      const nextX = event.clientX - smartPanelDragOffsetRef.current.x;
+      const nextY = event.clientY - smartPanelDragOffsetRef.current.y;
+      setSmartPanelPosition({
+        x: Math.min(maxX, Math.max(minX, nextX)),
+        y: Math.min(maxY, Math.max(minY, nextY)),
+      });
+    };
+    const handleMouseUp = () => {
+      setIsDraggingSmartPanel(false);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSmartPanel]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -1034,18 +1132,6 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [repairNotice]);
 
-  useEffect(() => {
-    if (!isTemplatePopoverOpen) return;
-    const handleMouseDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (templatePopoverRef.current && !templatePopoverRef.current.contains(target)) {
-        setIsTemplatePopoverOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [isTemplatePopoverOpen]);
-
   return (
     <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#23272e]' : 'bg-white'}`}>
       
@@ -1063,6 +1149,7 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left: Editor Panel */}
         <div 
+          ref={editorPanelRef}
           style={{ width: `${leftWidth}%` }}
           className={`flex flex-col z-10 relative transition-colors duration-500
             ${isDarkMode ? 'bg-[#23272e] shadow-none' : 'bg-[#fdfcf5] border-r border-[#e0e0e0] shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
@@ -1098,23 +1185,6 @@ export default function App() {
                         <button type="button" onClick={handleRedo} disabled={historyIndex >= history.length - 1} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 ${historyIndex < history.length - 1 ? (isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]') : 'text-gray-300/20 cursor-not-allowed'}`} title="重做 (Ctrl+Shift+Z)"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
                     </div>
                     <div className={`w-px h-3 mx-1 transition-colors ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300'}`}></div>
-                    <div ref={templatePopoverRef} className="relative">
-                      <button onClick={openTemplatePopover} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="智能排版">
-                        <svg className="w-3.5 h-3.5 text-[#e5c07b]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l1.5 3L10 7.5 6.5 9 5 12.5 3.5 9 0 7.5 3.5 6zM14 7l2.5 5 5 2.5-5 2.5L14 22l-2.5-5-5-2.5 5-2.5zM9 12l1 2 2 1-2 1-1 2-1-2-2-1 2-1z" /></svg>
-                        <span className="hidden xl:inline">智能</span>
-                      </button>
-                      {isTemplatePopoverOpen && (
-                        <div className="absolute left-0 top-full mt-2 z-50">
-                          <ContentTemplatePopover
-                            isDarkMode={isDarkMode}
-                            sourceText={templateContext.sourceText}
-                            hasSelection={templateContext.hasSelection}
-                            onApply={handleApplyTemplateResult}
-                            onClose={() => setIsTemplatePopoverOpen(false)}
-                          />
-                        </div>
-                      )}
-                    </div>
                     <div className="flex items-center gap-2">
                         <button onClick={handleSelectAll} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="全选"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg><span className="hidden xl:inline">全选</span></button>
                         <button onClick={handleCopySelection} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="复制选中内容"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg><span className="hidden xl:inline">复制</span></button>
@@ -1235,17 +1305,76 @@ export default function App() {
 
           </div>
 
-          <textarea
-            ref={textareaRef}
-            onScroll={handleEditorScroll}
-            className={`flex-1 w-full px-8 pb-8 pt-2 resize-none focus:outline-none font-mono text-[15px] leading-[32px] bg-[length:100%_32px] bg-[position:0_0] bg-local transition-colors duration-500 ${isDarkMode ? 'text-[#d4cfbf] bg-[image:linear-gradient(transparent_31px,#333842_31px)] placeholder-[#5c6370] bg-[#23272e]' : 'text-[#2d2d2d] bg-transparent bg-[image:linear-gradient(transparent_31px,#e8e8e8_31px)] placeholder-gray-400/50'}`}
-            value={markdown}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="在此输入 Markdown..."
-            spellCheck={false}
-          />
+          <div className="relative flex-1 flex min-h-0">
+            <div
+              className={`relative w-14 flex-shrink-0 ${
+                isDarkMode ? 'bg-[#1e2227]' : 'bg-[#fdfcf5]'
+              }`}
+            >
+              <div
+                className={`absolute left-2 top-24 z-30 flex flex-col items-center gap-2 rounded-full px-1.5 py-2 shadow-lg ${
+                  isDarkMode
+                    ? 'bg-[#2c313a] text-[#d4cfbf]'
+                    : 'bg-[#f1efea] text-[#6f6558]'
+                }`}
+              >
+              {[
+                { key: 'semantic', label: '语义排版', icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h13" />
+                  </svg>
+                )},
+                { key: 'event', label: '活动海报', icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="5" width="18" height="16" rx="2" ry="2" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 3v4M8 3v4M3 11h18" />
+                  </svg>
+                )},
+                { key: 'poem', label: '竖排诗', icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M12 6v12M17 8v8" />
+                  </svg>
+                )},
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => openTemplatePopover(item.key as TemplateKind)}
+                  className={`group relative w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                    smartPanelTemplate === item.key && isTemplatePopoverOpen
+                      ? (isDarkMode ? 'bg-[#3e4451] text-[#e5c07b]' : 'bg-white text-[#c28c2c]')
+                      : (isDarkMode ? 'hover:bg-[#3e4451]' : 'hover:bg-white')
+                  }`}
+                >
+                  {item.icon}
+                  <span
+                    className={`absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 ${
+                      isDarkMode
+                        ? 'bg-[#1e2227] text-[#d4cfbf]'
+                        : 'bg-white text-[#6f6558] shadow-sm border border-[#e8e6df]'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+              </div>
+            </div>
+            <div className="relative flex-1 min-h-0">
+              <textarea
+                ref={textareaRef}
+                onScroll={handleEditorScroll}
+                className={`h-full w-full pl-8 pr-8 pb-8 pt-2 resize-none focus:outline-none font-mono text-[15px] leading-[32px] bg-[length:100%_32px] bg-[position:0_0] bg-local transition-colors duration-500 ${isDarkMode ? 'text-[#d4cfbf] bg-[image:linear-gradient(transparent_31px,#333842_31px)] placeholder-[#5c6370] bg-[#23272e]' : 'text-[#2d2d2d] bg-transparent bg-[image:linear-gradient(transparent_31px,#e8e8e8_31px)] placeholder-gray-400/50'}`}
+                value={markdown}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder="在此输入 Markdown..."
+                spellCheck={false}
+              />
+
+            </div>
+          </div>
         </div>
 
         {/* Resizer Handle */}
@@ -1326,6 +1455,13 @@ export default function App() {
                containerRef={posterScrollRef}
                onScroll={handlePreviewScroll}
                customThemeColor={customThemeColor}
+               presetWidth={posterWidthPreset}
+               presetWidthToken={posterWidthPresetToken}
+               presetCoreContentWidth={posterCoreWidthPreset}
+               onPosterWidthChange={(nextWidth) => {
+                 const rounded = Math.max(320, Math.min(2000, Math.round(nextWidth)));
+                 setPosterWidthPreset(rounded);
+               }}
              />
 
             {/* --- WRITING MODE RENDER --- */}
@@ -1369,6 +1505,24 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {isTemplatePopoverOpen && (
+        <div
+          className="fixed z-[120]"
+          style={{ left: smartPanelPosition.x, top: smartPanelPosition.y }}
+        >
+          <ContentTemplatePopover
+            isDarkMode={isDarkMode}
+            sourceText={templateContext.sourceText}
+            hasSelection={templateContext.hasSelection}
+            initialTemplate={smartPanelTemplate}
+            showTabs={false}
+            onApply={handleApplyTemplateResult}
+            onClose={() => setIsTemplatePopoverOpen(false)}
+            onDragStart={startSmartPanelDrag}
+          />
+        </div>
+      )}
       
       {/* Confirmation Modal for Reset */}
       <ConfirmationModal

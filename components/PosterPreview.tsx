@@ -1,5 +1,5 @@
 
-import React, { useMemo, forwardRef, useState, useCallback, useRef } from 'react';
+import React, { useMemo, forwardRef, useState, useCallback, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -31,6 +31,10 @@ interface PosterPreviewProps {
   containerRef?: React.RefObject<HTMLDivElement | null>;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
   customThemeColor?: string;
+  presetWidth?: number;
+  presetWidthToken?: number;
+  presetCoreContentWidth?: number;
+  onPosterWidthChange?: (width: number) => void;
 }
 
 /**
@@ -83,7 +87,11 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   imagePool,
   isDarkMode,
   visible,
-  customThemeColor
+  customThemeColor,
+  presetWidth,
+  presetWidthToken,
+  presetCoreContentWidth,
+  onPosterWidthChange
 }, ref) => {
   
   const themeStyle = useMemo(() => getThemeStyles(theme, customThemeColor), [theme, customThemeColor]);
@@ -100,8 +108,35 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   const [isPreviewFocused, setIsPreviewFocused] = useState(false);
 
   // --- Resize Logic ---
-  const [posterWidth, setPosterWidth] = useState(640);
+  const [posterWidth, setPosterWidth] = useState(presetWidth ?? 640);
   const isResizing = useRef(false);
+  const posterNodeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof presetWidth !== 'number' || !Number.isFinite(presetWidth)) return;
+    const clamped = Math.max(320, Math.min(2000, presetWidth));
+    setPosterWidth(clamped);
+  }, [presetWidth, presetWidthToken]);
+
+  useEffect(() => {
+    if (typeof presetCoreContentWidth !== 'number' || !Number.isFinite(presetCoreContentWidth)) return;
+    const posterNode = posterNodeRef.current;
+    if (!posterNode) return;
+
+    const computed = window.getComputedStyle(posterNode);
+    const paddingLeft = parseFloat(computed.paddingLeft || '0') || 0;
+    const paddingRight = parseFloat(computed.paddingRight || '0') || 0;
+    const currentCoreWidth = posterNode.clientWidth - paddingLeft - paddingRight;
+    const diff = presetCoreContentWidth - currentCoreWidth;
+    if (Math.abs(diff) <= 1) return;
+
+    setPosterWidth(prev => Math.max(320, Math.min(2000, prev + diff)));
+  }, [presetCoreContentWidth, presetWidthToken]);
+
+  useEffect(() => {
+    if (!onPosterWidthChange) return;
+    onPosterWidthChange(Math.round(posterWidth));
+  }, [posterWidth, onPosterWidthChange]);
 
   const startResizing = useCallback((direction: 'left' | 'right') => (mouseDownEvent: React.MouseEvent) => {
     mouseDownEvent.preventDefault();
@@ -263,7 +298,14 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
 
                         {/* --- ACTUAL POSTER CONTENT (Export Target) --- */}
                         <div 
-                            ref={ref}
+                            ref={(node) => {
+                                if (typeof ref === 'function') {
+                                    ref(node);
+                                } else if (ref) {
+                                    ref.current = node;
+                                }
+                                posterNodeRef.current = node;
+                            }}
                             id="poster-node"
                             className={`
                                 relative flex flex-col cursor-auto

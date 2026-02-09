@@ -23,6 +23,51 @@ const getGlmApiKey = () => {
   return undefined;
 };
 
+const parseJsonText = (raw: string) => {
+  const trimmed = raw.trim();
+  const direct = trimmed.match(/\{[\s\S]*\}/);
+  const jsonCandidate = direct ? direct[0] : trimmed;
+  try {
+    return JSON.parse(jsonCandidate);
+  } catch {
+    return null;
+  }
+};
+
+const callGlm = async (
+  content: string,
+  options?: { temperature?: number; maxTokens?: number }
+) => {
+  const apiKey = getGlmApiKey();
+  if (!apiKey) {
+    throw new Error("Missing GLM API key.");
+  }
+
+  const response = await fetch(GLM_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "glm-4.7-flash",
+      messages: [{ role: "user", content }],
+      thinking: { type: "disabled" },
+      temperature: options?.temperature ?? 0.3,
+      max_tokens: options?.maxTokens ?? 4096,
+      stream: false,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`GLM API Error: ${response.status} ${errorText}`);
+  }
+
+  const data = await response.json();
+  return String(data?.choices?.[0]?.message?.content || "").trim();
+};
+
 export const processMarkdownWithAi = async (
   currentText: string,
   action: AiAction
@@ -59,38 +104,29 @@ export const processMarkdownWithAi = async (
   }
 
   try {
-    const apiKey = getGlmApiKey();
-    if (!apiKey) {
-      throw new Error("Missing GLM API key.");
-    }
-
-    const response = await fetch(GLM_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "glm-4.7-flash",
-        messages: [
-          { role: "user", content: `${prompt}\n\n---\n\n${currentText}` },
-        ],
-        temperature: 0.3,
-        max_tokens: 4096,
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`GLM API Error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
-    const result = data?.choices?.[0]?.message?.content;
-    return result?.trim() || currentText;
+    const result = await callGlm(`${prompt}\n\n---\n\n${currentText}`);
+    return result || currentText;
   } catch (error) {
     console.error("GLM API Error:", error);
     throw error;
   }
+};
+
+export const inferPoemMetaWithAi = async (
+  poemText: string
+): Promise<{ title: string; author: string }> => {
+  if (!poemText.trim()) {
+    return { title: "", author: "" };
+  }
+
+  const result = await callGlm(
+    `${AI_PROMPTS.poemMeta}\n\n---\n\n${poemText}`,
+    { temperature: 0.1, maxTokens: 800 }
+  );
+
+  const parsed = parseJsonText(result);
+  const title = typeof parsed?.title === "string" ? parsed.title.trim() : "";
+  const author = typeof parsed?.author === "string" ? parsed.author.trim() : "";
+
+  return { title, author };
 };
