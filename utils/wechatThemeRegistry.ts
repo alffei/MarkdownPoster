@@ -1,3 +1,7 @@
+/**
+ * 模块说明：公众号主题注册中心，负责加载并解析微信主题定义。
+ */
+
 import yaml from 'js-yaml';
 import { WECHAT_THEME_CONFIG_YAML } from '../config/wechatConfig';
 import { themes, PrismTheme } from 'prism-react-renderer';
@@ -7,7 +11,8 @@ import { WeChatStyleDef } from '../types';
 interface WeChatLayoutDef {
   id: string;
   name: string;
-  styles: Record<string, any>; // Raw style object from YAML with placeholders
+  // 来自 YAML 的原始样式对象，仍包含占位符
+  styles: Record<string, any>;
 }
 
 interface WeChatCodeThemeDef {
@@ -33,7 +38,7 @@ class WeChatThemeRegistryClass {
       this.config = yaml.load(WECHAT_THEME_CONFIG_YAML) as WeChatParsedConfig;
     } catch (e) {
       console.error("Failed to parse WeChat Theme YAML:", e);
-      // Fallback minimal config
+      // 配置解析失败时回退到最小可用配置，保证编辑器仍可运行
       this.config = {
         colorPresets: [{ color: '#07c160', label: 'Default' }],
         codeThemes: [{ label: 'Dark', value: 'vsDark', isDark: true }],
@@ -45,7 +50,7 @@ class WeChatThemeRegistryClass {
     }
   }
 
-  // --- Getters ---
+  // 读取配置项
   getColorPresets() { return this.config.colorPresets || []; }
   getCodeThemes() { return this.config.codeThemes || []; }
   getFontSizes() { return this.config.fontSizes || []; }
@@ -53,7 +58,7 @@ class WeChatThemeRegistryClass {
   getCaptionTypes() { return this.config.captionTypes || []; }
   getLayouts() { return this.config.layouts || []; }
 
-  // --- Helpers ---
+  // 映射辅助：把枚举值转换为真实渲染值
 
   getFontSizePixel(value: string): string {
     const found = this.config.fontSizes?.find(f => f.value === value);
@@ -67,7 +72,7 @@ class WeChatThemeRegistryClass {
 
   getCodeThemeDef(value: string) {
     const def = this.config.codeThemes?.find(t => t.value === value);
-    // Map string value to actual Prism theme object
+    // 把字符串主题 ID 映射到 prism 的主题对象
     const themeMap: Record<string, PrismTheme> = {
       vsDark: themes.vsDark,
       vsLight: themes.vsLight,
@@ -84,19 +89,19 @@ class WeChatThemeRegistryClass {
     };
   }
 
-  // --- Style Generation with Interpolation ---
+  // 样式生成：解析布局并替换主色占位符
 
   getLayoutStyles(layoutId: string, primaryColor: string): WeChatStyleDef {
     const layout = this.config.layouts?.find(l => l.id === layoutId);
     
-    // Default fallback styles if layout not found or missing specific keys
+    // 布局不存在时返回兜底样式，避免渲染时报 undefined
     const fallback: WeChatStyleDef = {
        h1: {}, h2: {}, h3: {}, list: {}, blockquote: {}, link: {}, hr: {}
     };
 
     if (!layout || !layout.styles) return fallback;
 
-    // Deep interpolation of the style object
+    // 深度替换样式树里的主色占位符
     const styles = this.interpolateStyles(layout.styles, primaryColor);
     
     return { ...fallback, ...styles };
@@ -104,8 +109,8 @@ class WeChatThemeRegistryClass {
 
   private interpolateStyles(obj: any, primaryColor: string): any {
     if (typeof obj === 'string') {
-        // Replace {{primary}} with hex color
-        // Replace {{primary_0.5}} with rgba(hex, 0.5)
+        // {{primary}} => #RRGGBB
+        // {{primary_0.5}} => rgba(...)
         return obj.replace(/{{primary(?:_([\d.]+))?}}/g, (_, alpha) => {
             if (alpha) {
                 return hexToRgba(primaryColor, parseFloat(alpha));

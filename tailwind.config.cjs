@@ -1,3 +1,7 @@
+/**
+ * 模块说明：Tailwind 样式配置文件，定义扫描范围与扩展样式能力。
+ */
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [

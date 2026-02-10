@@ -1,3 +1,6 @@
+/**
+ * 模块说明：公众号导出工具集合，处理 HTML 转换与复制流程。
+ */
 
 import { uploadToImgbb } from '../services/imgbbService';
 
@@ -9,23 +12,19 @@ export interface WeChatCopyResult {
 }
 
 /**
- * Processes the WeChat Preview DOM:
- * 1. Clones the DOM node.
- * 2. Scans for images with Base64 or Blob URLs.
- * 3. Uploads them to ImgBB to get a public URL.
- * 4. Replaces the src in the cloned DOM.
- * 5. Copies the final HTML to clipboard.
- * 
- * Returns a result object detailing success/failure counts.
+ * 公众号复制流程：
+ * 1. 克隆预览 DOM，避免操作真实页面节点。
+ * 2. 扫描 base64/blob 图片并上传到图床，替换为公网地址。
+ * 3. 将最终 HTML + 纯文本写入系统剪贴板，兼容不同粘贴目标。
  */
 export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<WeChatCopyResult> => {
     const contentNode = container.querySelector('.wechat-content');
     if (!contentNode) throw new Error("Content node not found");
 
-    // 1. Clone the node to manipulate without affecting UI
+    // 先克隆后处理，确保任何上传失败都不会影响当前预览状态。
     const clone = contentNode.cloneNode(true) as HTMLElement;
 
-    // 2. Find all images
+    // 收集所有图片节点，后续统一并行处理。
     const images = Array.from(clone.querySelectorAll('img'));
     
     const errors: string[] = [];
@@ -35,17 +34,17 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
         console.log(`Processing ${images.length} images for WeChat export...`);
     }
 
-    // 3. Process images in parallel (Wait for all, don't throw on individual fail)
+    // 并行处理图片上传：单张失败不打断整体导出。
     await Promise.all(images.map(async (img) => {
         const src = img.src;
         try {
             let base64Data = '';
 
-            // Case A: Image is Base64 (Local Image)
+            // 场景 A：本地图片（data URI），直接上传。
             if (src.startsWith('data:image')) {
                 base64Data = src;
             } 
-            // Case B: Image is Blob (External Proxied Image)
+            // 场景 B：blob URL，先转回 base64 再上传。
             else if (src.startsWith('blob:')) {
                 const response = await fetch(src);
                 const blob = await response.blob();
@@ -57,7 +56,7 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
                 });
             }
 
-            // If we have base64 data, upload it
+            // 有可上传数据时才执行图床替换。
             if (base64Data) {
                 const remoteUrl = await uploadToImgbb(base64Data);
                 img.src = remoteUrl;
@@ -66,15 +65,14 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
             console.error("Failed to process image for WeChat copy", e);
             failedCount++;
             errors.push(e.message || "Unknown upload error");
-            // If upload fails, we leave the src as is (or could replace with a placeholder)
-            // WeChat might show a broken image, but the text structure is preserved.
+            // 失败时保留原始 src，保证文本结构仍可复制。
         }
     }));
 
-    // 4. Get final HTML with inline styles
+    // 富文本用于公众号粘贴，纯文本作为兼容兜底。
     const htmlContent = clone.innerHTML;
     
-    // 5. Copy to clipboard
+    // 同时写入 text/html 与 text/plain，提升跨应用粘贴成功率。
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const textBlob = new Blob([clone.innerText || ''], { type: 'text/plain' });
     

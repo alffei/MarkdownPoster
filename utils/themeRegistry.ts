@@ -1,3 +1,6 @@
+/**
+ * 模块说明：主题注册中心，负责解析配置并提供查询与筛选接口。
+ */
 
 import yaml from 'js-yaml';
 import { THEME_CONFIG_YAML } from '../config/themeConfig';
@@ -8,20 +11,28 @@ import { BorderStyleConfig, WatermarkAlign, PosterTemplate } from '../types';
 export interface ThemeDef extends BorderStyleConfig {
     id: string;
     name: string;
-    preview: string; // Tailwind class for small preview circle
-    isDark?: boolean; // If true, UI might adjust contrast
-    customHeader?: string; // For specific header renderings like macos/sunset/candy
-    customDecor?: string; // New: For corner decorations (Ink squares, Baroque patterns)
-    allowCustomColor?: boolean; // New: If true, enables the color picker for this theme
+    // 缩略图预览使用的 Tailwind 类
+    preview: string;
+    // 暗色主题标记，用于自动调整对比度
+    isDark?: boolean;
+    // 顶部装饰预设键，如 macos/sunset
+    customHeader?: string;
+    // 角落装饰预设键
+    customDecor?: string;
+    // 是否允许用户改主色
+    allowCustomColor?: boolean;
 }
 
 export interface WritingThemeDef {
     id: string;
     name: string;
     isDark: boolean;
-    className: string; // Container background
-    prose: string; // Text typography
-    preview: string; // Small preview style
+    // 容器背景类
+    className: string;
+    // 正文排版类
+    prose: string;
+    // 主题缩略图样式
+    preview: string;
 }
 
 export interface LayoutDef {
@@ -62,11 +73,11 @@ interface ParsedConfig {
     defaults: Defaults;
     borderThemes: ThemeDef[]; // Renamed from 'themes' in previous version
     layoutThemes: LayoutDef[];
-    // writingThemes removed from YAML
+    // 阅读主题不再从 YAML 加载
     fontSizes: FontSizeDef[];
     paddings: PaddingDef[];
     
-    // Legacy support if yaml uses old key
+    // 兼容旧 YAML 键名
     themes?: ThemeDef[]; 
 }
 
@@ -83,7 +94,7 @@ class ThemeRegistryClass {
         try {
             this.config = yaml.load(THEME_CONFIG_YAML) as ParsedConfig;
             
-            // Normalize border themes (handle potential legacy key 'themes')
+            // 兼容旧配置键名：早期版本使用 themes，新版本使用 borderThemes。
             const borderThemes = this.config.borderThemes || this.config.themes || [];
 
             this.themeMap = {};
@@ -92,7 +103,7 @@ class ThemeRegistryClass {
             });
 
             this.writingThemeMap = {};
-            // Load writing themes from separate TS file instead of YAML
+            // 阅读主题独立维护在 TS 配置中，避免与海报主题耦合。
             WRITING_THEMES.forEach(t => {
                 this.writingThemeMap[t.id] = t;
             });
@@ -112,12 +123,12 @@ class ThemeRegistryClass {
                 this.paddingMap[p.id] = p;
             });
 
-            // Load Templates
+            // 海报模板作为独立配置源直接挂载。
             this.templates = POSTER_TEMPLATES;
 
         } catch (e) {
             console.error("Failed to parse Theme YAML:", e);
-            // Fallback structure
+            // 解析失败时降级到最小可用默认值，保证应用仍能启动。
             this.config = {
                 defaults: { 
                     theme: 'Minimal', 
@@ -145,7 +156,7 @@ class ThemeRegistryClass {
         }
     }
 
-    // --- Accessors for Lists ---
+    // 列表读取接口
 
     getBorderThemes(): ThemeDef[] {
         return this.config.borderThemes || this.config.themes || [];
@@ -171,7 +182,7 @@ class ThemeRegistryClass {
         return this.templates;
     }
 
-    // --- Accessors for Individual Items ---
+    // 单项读取接口
 
     getBorderTheme(id: string): ThemeDef | undefined {
         return this.themeMap[id];
@@ -197,7 +208,7 @@ class ThemeRegistryClass {
 
     getDefaults(): Defaults {
         const d = this.config.defaults;
-        // Ensure nested objects exist to prevent crashes if YAML is malformed
+        // 对嵌套字段做兜底，防止配置缺失触发运行时错误。
         return {
             theme: d?.theme || 'Minimal',
             layout: d?.layout || 'Base',

@@ -1,3 +1,6 @@
+/**
+ * 模块说明：阅读预览组件，负责以阅读主题渲染 Markdown 内容。
+ */
 
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -18,7 +21,8 @@ interface WritingPreviewProps {
   fontSize: FontSize;
   imagePool: Record<string, string>;
   visible: boolean;
-  isDarkMode: boolean; // Retained for fallback or chrome styling if needed
+  // 仅用于容器层兜底配色与外层 UI 过渡
+  isDarkMode: boolean;
   writingTheme?: WritingTheme;
   containerRef?: React.RefObject<HTMLDivElement | null>;
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
@@ -36,10 +40,10 @@ export const WritingPreview: React.FC<WritingPreviewProps> = ({
 }) => {
   const normalizedMarkdown = normalizeQuotedEmphasis(markdown);
   
-  // Look up the selected theme definition
+  // 读取当前阅读主题定义
   const themeDef = writingTheme ? ThemeRegistry.getWritingTheme(writingTheme) : undefined;
 
-  // Determine styles based on theme, fallback to legacy isDarkMode logic if theme not found
+  // 优先使用主题配置；主题缺失时回退到 isDarkMode 兜底样式
   const containerBgClass = themeDef?.className || (isDarkMode ? 'bg-[#1a1d23]' : 'bg-gray-100');
   
   const proseClass = themeDef?.prose || (isDarkMode 
@@ -54,11 +58,11 @@ export const WritingPreview: React.FC<WritingPreviewProps> = ({
             visible ? 'z-10 visible' : 'z-0 invisible'
         } ${containerBgClass}`}
     >
-       {/* 
-          Updated Layout:
-          - w-[90%] md:w-[85%]: Takes up a proportional width of the container.
-          - max-w-7xl: Allows expansion up to ~1280px (significantly larger than before).
-          - mx-auto: Centers the content.
+       {/*
+          阅读区布局：
+          - `w-[90%] md:w-[85%]`：按视口比例占宽；
+          - `max-w-7xl`：提供更大的长文阅读宽度上限；
+          - `mx-auto`：保持居中。
        */}
        <div className={`w-[90%] md:w-[85%] max-w-7xl mx-auto py-12 min-h-full origin-center transition-all duration-300 ease-out delay-75 ${
            visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'

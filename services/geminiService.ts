@@ -1,3 +1,7 @@
+/**
+ * 模块说明：AI 服务封装，负责调用大模型接口并返回结构化文本结果。
+ */
+
 import { AiAction } from "../types";
 import { AI_PROMPTS, EVENT_POSTER_TEMPLATE } from "../config/aiTemplates";
 
@@ -13,6 +17,7 @@ const getGlmApiKey = () => {
   if (keyFromVite) return keyFromVite;
 
   if (typeof process !== "undefined") {
+    // 兼容浏览器构建注入与 Node 环境执行两种变量来源。
     return (
       process.env.BIGMODEL_API_KEY ||
       process.env.GLM_API_KEY ||
@@ -25,6 +30,7 @@ const getGlmApiKey = () => {
 
 const parseJsonText = (raw: string) => {
   const trimmed = raw.trim();
+  // 部分模型会返回“解释 + JSON”，这里优先提取首个 JSON 片段再解析。
   const direct = trimmed.match(/\{[\s\S]*\}/);
   const jsonCandidate = direct ? direct[0] : trimmed;
   try {
@@ -52,6 +58,7 @@ const callGlm = async (
     body: JSON.stringify({
       model: "glm-4.7-flash",
       messages: [{ role: "user", content }],
+      // 关闭思维链输出，避免返回冗长推理文本污染结构化结果。
       thinking: { type: "disabled" },
       temperature: options?.temperature ?? 0.3,
       max_tokens: options?.maxTokens ?? 4096,
@@ -96,6 +103,7 @@ export const processMarkdownWithAi = async (
       prompt = AI_PROMPTS.semanticFormat;
       break;
     case AiAction.EVENT_POSTER:
+      // 活动海报提示词依赖模板占位，运行时注入当前固定模板文本。
       prompt = AI_PROMPTS.eventPoster.replace(
         "{{EVENT_TEMPLATE}}",
         EVENT_POSTER_TEMPLATE
@@ -104,6 +112,7 @@ export const processMarkdownWithAi = async (
   }
 
   try {
+    // 模型若返回空结果，回退到原文，避免调用方拿到空字符串覆盖正文。
     const result = await callGlm(`${prompt}\n\n---\n\n${currentText}`);
     return result || currentText;
   } catch (error) {
@@ -121,6 +130,7 @@ export const inferPoemMetaWithAi = async (
 
   const result = await callGlm(
     `${AI_PROMPTS.poemMeta}\n\n---\n\n${poemText}`,
+    // 识别任务偏向确定性，温度降低并限制输出长度。
     { temperature: 0.1, maxTokens: 800 }
   );
 

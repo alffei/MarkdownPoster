@@ -1,3 +1,6 @@
+/**
+ * 模块说明：海报外观弹层组件，提供模板选择与微调面板。
+ */
 
 import React, { useState, useMemo } from 'react';
 import { BorderTheme, FontSize, LayoutTheme, PaddingSize, WatermarkAlign, SpacingLevel, PosterTemplate } from '../types';
@@ -24,14 +27,14 @@ interface AppearancePopoverProps {
   isDarkMode: boolean;
   onClose: () => void;
   
-  // New props for custom color
+  // 自定义主色参数
   customThemeColor?: string;
   setCustomThemeColor?: (color: string) => void;
 
-  // New template handler
+  // 模板应用入口
   onApplyTemplate: (template: PosterTemplate) => void;
 
-  // Restore current template defaults (preferred, so App can clear cached tweaks)
+  // 恢复当前模板默认值（优先走 App，便于清除缓存微调）
   onRestoreTemplateDefaults?: () => void;
 }
 
@@ -53,7 +56,7 @@ const FeatureOptions = [
     { label: '可改色', value: 'CustomColor' }
 ];
 
-// Helper component to render the "Mini Poster" preview
+// 缩略图组件：用于模板宫格里的“迷你海报”预览
 const ThemeThumbnail = ({ 
     themeId, 
     label,
@@ -65,8 +68,7 @@ const ThemeThumbnail = ({
     isActive: boolean, 
     isDarkMode: boolean 
 }) => {
-    // Hardcoded styling logic for the thumbnail to ensure it looks exactly like the design
-    // regardless of the complex CSS classes used in the actual render.
+    // 缩略图样式独立于真实渲染层，保证模板卡片视觉稳定、可预测
     
     const getThumbnailStyle = () => {
         switch(themeId) {
@@ -204,15 +206,15 @@ const ThemeThumbnail = ({
             }
             ${style.frame}
         `}>
-            {/* The Inner Card (Mini Poster) */}
+            {/* 内层卡片（迷你海报） */}
             <div className={`w-full h-full relative flex flex-col overflow-hidden ${style.card}`}>
                 
-                {/* Header Area */}
+                {/* 头部区域 */}
                 <div className={`h-2.5 w-full flex items-center shrink-0 ${style.header ? 'border-b border-black/5' : ''}`}>
                     {style.header}
                 </div>
 
-                {/* Content Area (Label inside illustration) */}
+                {/* 内容区域（在缩略图内显示标题） */}
                 <div className="flex-1 p-1 flex flex-col items-center justify-center text-center">
                     <span className={`text-[10px] font-bold leading-none tracking-tight select-none break-all line-clamp-2 ${
                         style.isDark || themeId === 'Neon' || themeId === 'Aurora' || themeId === 'Radiance' 
@@ -223,7 +225,7 @@ const ThemeThumbnail = ({
                     </span>
                 </div>
 
-                {/* Decorations */}
+                {/* 装饰层 */}
                 {/* @ts-ignore */}
                 {style.decor}
             </div>
@@ -282,9 +284,9 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
 
   const filteredTemplates = useMemo(() => {
     return allTemplates.filter(t => {
-      // Scenario Filter
+      // 场景筛选
       if (activeScenario !== 'All' && t.scenario !== activeScenario) return false;
-      // Feature Filter
+      // 特征筛选
       if (activeFeature !== 'All') {
           if (!t.features.includes(activeFeature)) return false;
       }
@@ -311,7 +313,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
     }
   };
   
-  // Generate summary string for fine-tuning header
+  // 生成“微调”折叠标题的摘要串
   const getSummaryString = () => {
     const layoutLabel = allLayouts.find(l => l.id === layoutTheme)?.name || layoutTheme;
     const spacingLabel = spacing === 'standard' ? '标准' : spacing === 'compact' ? '紧凑' : '宽松';
@@ -321,14 +323,14 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   };
 
   return (
-    // Width increased to 600px to accommodate 6 columns
+    // 宽度设置为 600px，保证 6 列模板卡片可完整显示
     <div className={`absolute top-full right-0 mt-2 w-[600px] rounded-xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none overflow-hidden
       ${isDarkMode 
         ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50' 
         : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/50'
       }`}
     >
-      {/* --- HEADER --- */}
+      {/* 顶部标题栏 */}
       <div className={`flex justify-between items-center px-5 py-3 border-b ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
         <h3 className="text-sm font-bold opacity-90">自定义海报外观</h3>
         <button onClick={onClose} className="opacity-50 hover:opacity-100">
@@ -337,13 +339,13 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
       </div>
 
       <div className="flex flex-col max-h-[80vh] overflow-y-auto custom-scrollbar">
-          {/* --- TOP SECTION: TEMPLATES --- */}
+          {/* 上半区：模板选择 */}
           <div className="p-5 pb-0">
              
-             {/* 1. Theme Style (Template) Header */}
+             {/* 模板分组标题 */}
              <div className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-3">主题风格 (模板)</div>
 
-             {/* 2. Filters Row 1: Scenarios */}
+             {/* 第一行筛选：场景 */}
              <div className="flex items-center gap-3 mb-3">
                  <span className="text-xs font-medium opacity-60 w-8 flex-shrink-0">场景</span>
                  <div className="flex gap-2 flex-wrap">
@@ -363,7 +365,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                  </div>
              </div>
 
-             {/* 3. Filters Row 2: Features + Color Picker */}
+             {/* 第二行筛选：特征 + 主色调色器 */}
              <div className="flex items-center gap-3 mb-4">
                  <span className="text-xs font-medium opacity-60 w-8 flex-shrink-0">特征</span>
                  <div className="flex gap-2 flex-wrap flex-1">
@@ -382,10 +384,10 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                      ))}
                  </div>
 
-                 {/* Divider */}
+                 {/* 分隔线 */}
                  <div className={`w-px h-6 mx-1 ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-200'}`}></div>
 
-                 {/* Primary Color Picker (Conditional State) */}
+                 {/* 主色调色器：仅支持改色的模板可用 */}
                  <div className="relative group flex items-center justify-center">
                     <div className={`w-6 h-6 rounded-full border shadow-sm transition-all duration-300 flex items-center justify-center overflow-hidden
                         ${isCustomizable 
@@ -396,7 +398,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                     `}
                     style={{ backgroundColor: isCustomizable ? customThemeColor : 'transparent' }}
                     >
-                         {/* Icon: Only show faint icon if NOT customizable or no color set (fallback) */}
+                         {/* 不可改色时展示浅色图标，明确当前状态 */}
                          {!isCustomizable && (
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
@@ -411,14 +413,14 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                              />
                          )}
                     </div>
-                    {/* Tooltip for Filter Logic clarification */}
+                    {/* 状态提示 */}
                     <div className="absolute top-full right-0 mt-2 text-[10px] bg-black text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                         {isCustomizable ? '点击修改主色' : '该主题不支持改色'}
                     </div>
                  </div>
              </div>
 
-             {/* 4. Template Grid (UPDATED: 6 Columns, labels inside) */}
+             {/* 模板宫格：6 列，标题直接展示在缩略图内部 */}
              <div className="grid grid-cols-6 gap-3 mb-6">
                  {filteredTemplates.map(tpl => {
                      const isActive = currentTheme === tpl.borderThemeId && layoutTheme === tpl.layoutThemeId;
@@ -433,7 +435,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                             className={`flex flex-col group text-left transition-all duration-200 ${isActive ? 'scale-105' : 'hover:scale-105'}`}
                             title={tpl.label}
                          >
-                             {/* Mini Poster Preview with Label Inside */}
+                             {/* 缩略图 + 内嵌标题 */}
                              <ThemeThumbnail 
                                 themeId={tpl.borderThemeId}
                                 label={tpl.label}
@@ -446,10 +448,10 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
              </div>
           </div>
 
-          {/* --- BOTTOM SECTION: FINE-TUNING --- */}
+          {/* 下半区：模板微调 */}
           <div className={`border-t ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
              
-             {/* Accordion Header */}
+             {/* 折叠标题 */}
              <button 
                 onClick={() => setIsFineTuningOpen(!isFineTuningOpen)}
                 className={`w-full flex items-center justify-between px-5 py-3 hover:bg-black/5 transition-colors ${
@@ -467,16 +469,16 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                  </svg>
              </button>
 
-             {/* Accordion Content */}
+             {/* 折叠内容 */}
              {isFineTuningOpen && (
                  <div className="px-5 pb-5 animate-in slide-in-from-top-2">
                      <div className="flex gap-6">
                          
-                         {/* LEFT COLUMN: LAYOUT */}
+                         {/* 左列：版面参数 */}
                          <div className="flex-1 space-y-4">
                              <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">版面</div>
                              
-                             {/* Spacing (Density) */}
+                             {/* 间距密度 */}
                              <div className="flex items-center justify-between">
                                  <span className="text-xs font-medium opacity-70">间距</span>
                                  <div className={`flex rounded-md border overflow-hidden ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -500,7 +502,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                                  </div>
                              </div>
 
-                             {/* Font Size */}
+                             {/* 字号 */}
                              <div className="flex items-center justify-between">
                                  <span className="text-xs font-medium opacity-70">字号</span>
                                  <div className={`flex rounded-md border overflow-hidden ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -520,7 +522,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                                  </div>
                              </div>
 
-                             {/* Padding */}
+                             {/* 边距 */}
                              <div className="flex items-center justify-between">
                                  <span className="text-xs font-medium opacity-70">边距</span>
                                  <div className={`flex rounded-md border overflow-hidden ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -541,14 +543,14 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                              </div>
                          </div>
 
-                         {/* DIVIDER */}
+                         {/* 分隔线 */}
                          <div className={`w-px bg-gradient-to-b ${isDarkMode ? 'from-[#3e4451] to-transparent' : 'from-gray-200 to-transparent'}`}></div>
 
-                         {/* RIGHT COLUMN: TEXT & SIGNATURE */}
+                         {/* 右列：文本风格与署名 */}
                          <div className="flex-1 space-y-4">
                              <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">文本与署名</div>
                              
-                             {/* Text Style (LayoutTheme) */}
+                             {/* 文字风格（layoutTheme） */}
                              <div className="flex items-center justify-between">
                                  <span className="text-xs font-medium opacity-70">文字风格</span>
                                  <div className={`flex rounded-md border overflow-hidden ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -568,7 +570,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                                  </div>
                              </div>
 
-                             {/* Watermark Toggle */}
+                             {/* 水印开关 */}
                              <div className="flex items-center justify-between">
                                  <span className="text-xs font-medium opacity-70">水印</span>
                                  <button 
@@ -583,7 +585,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                                 </button>
                              </div>
 
-                             {/* Watermark Details (Conditional) */}
+                             {/* 水印细项：仅开启水印时展示 */}
                              {showWatermark && (
                                  <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                                      <input 
@@ -626,7 +628,7 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
                          </div>
                      </div>
                      
-                     {/* RESTORE BUTTON */}
+                     {/* 恢复默认按钮 */}
                      <div className="mt-5 flex justify-center">
                          <button
                             onClick={handleRestoreDefaults}

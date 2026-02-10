@@ -1,3 +1,6 @@
+/**
+ * 模块说明：默认示例内容常量，作为编辑器初始文案来源。
+ */
 
 export const DEFAULT_MARKDOWN = `# Markdown 海报生成器
 

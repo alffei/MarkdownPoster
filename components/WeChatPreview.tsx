@@ -1,3 +1,7 @@
+/**
+ * 模块说明：公众号预览组件，负责生成接近公众号排版的预览效果。
+ */
+
 import React, { useMemo, forwardRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -33,27 +37,27 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   onScroll
 }, ref) => {
   
-  // 1. Get Style from Registry
+  // 1) 根据当前布局与主色，取出主题样式
   const themeStyle = useMemo(() => {
       return WeChatThemeRegistry.getLayoutStyles(config.layout, config.primaryColor || '#07c160');
   }, [config.layout, config.primaryColor]);
 
-  // 2. Get Code Theme from Registry
+  // 2) 读取代码块主题定义
   const codeThemeDef = useMemo(() => {
       return WeChatThemeRegistry.getCodeThemeDef(config.codeTheme);
   }, [config.codeTheme]);
 
-  // Determine actual font size using registry helper
+  // 根据枚举值换算实际字号像素
   const baseFontSize = useMemo(() => {
       return WeChatThemeRegistry.getFontSizePixel(config.fontSize);
   }, [config.fontSize]);
 
-  // Determine line height using registry helper
+  // 根据枚举值换算行高系数
   const lineHeightValue = useMemo(() => {
       return WeChatThemeRegistry.getLineHeightScale(config.lineHeight);
   }, [config.lineHeight]);
   
-  // Font sizes for Headings (scaled)
+  // 标题字号按正文基准做比例放大
   const headingSizes = useMemo(() => {
       const base = parseInt(baseFontSize.replace('px', ''), 10);
       return {
@@ -63,7 +67,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
       }
   }, [baseFontSize]);
 
-  // Common Typography Style Object
+  // 正文通用样式，供段落/列表等复用
   const commonTextStyle = {
       fontSize: baseFontSize,
       lineHeight: lineHeightValue,
@@ -75,12 +79,12 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
       fontFamily: config.layout === 'Classic' ? '"Songti SC", "Noto Serif SC", serif' : '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif'
   };
 
-  // 1. Process Markdown for Footnotes & Header Info
+  // 3) 预处理 Markdown：提取标题、生成引用脚注、规范强调语法
   const { processedMarkdown, footnotes, headerInfo } = useMemo(() => {
      let text = markdown;
      let extractedTitle = "";
      
-     // Extract Title (First H1)
+     // 提取首个 H1 作为文章标题
      const titleMatch = text.match(/^#\s+(.*$)/m);
      if (titleMatch) {
          extractedTitle = titleMatch[1];
@@ -89,7 +93,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
          extractedTitle = "无标题";
      }
 
-     // Process Links to Footnotes if enabled
+     // 开启“引用链接”时，把正文链接转成脚注编号
      const links: string[] = [];
      if (config.linkReferences) {
         let linkCounter = 0;
@@ -97,7 +101,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         
         text = text.replace(linkRegex, (match, prefix, linkText, url) => {
             if (url.startsWith('#')) return match; 
-            // Avoid footnote processing for Ruby links
+            // `ruby:` 协议用于注音渲染，不应计入脚注
             if (url.startsWith('ruby:')) return match;
 
             linkCounter++;
@@ -120,9 +124,9 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
      };
   }, [markdown, config.linkReferences]);
 
-  // 2. Custom Renderers
+  // 4) 自定义渲染器：确保和公众号显示习惯一致
   const components = useMemo(() => ({
-      // Custom Checkbox for Task Lists
+      // 任务列表复选框：替换默认 checkbox，统一视觉
       input: ({ type, checked }: any) => {
         if (type !== 'checkbox') return null;
         return (
@@ -161,14 +165,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           const match = /language-(\w+)/.exec(className);
           const prismTheme = codeThemeDef.theme;
 
-          // Determine if theme is dark for header styling
+          // 根据主题明暗，切换代码头部与分割线颜色
           const isDarkTheme = codeThemeDef.isDark;
           
-          // Get background from theme or fallback
+          // 优先使用主题色，缺省时回退到安全背景色
           const themeBg = prismTheme.plain.backgroundColor || (isDarkTheme ? '#1e1e1e' : '#f6f8fa');
           const themeColor = prismTheme.plain.color || (isDarkTheme ? '#d4d4d4' : '#24292e');
 
-          // Use <section> for WeChat compatibility (preserves styles better than div)
+          // 使用 section 提高微信场景下的样式保真度
           return (
              <section style={{ 
                  margin: '1.5em 0', 
@@ -188,7 +192,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                         alignItems: 'center', 
                         gap: '6px', 
                         padding: '12px 16px', 
-                        // Adapt header background: translucent on dark, solid light gray on light
+                        // 暗色主题用半透明，亮色主题用浅灰，增强层级
                         backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.03)' : '#e6e8eb', 
                         borderBottom: isDarkTheme ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #dce0e3'
                     }}>
@@ -259,7 +263,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             );
         }
 
-        // Faint background based on primary color for inline code
+        // 行内代码使用主色的低透明背景，保持一致性
         const inlineCodeBg = hexToRgba(config.primaryColor, 0.1);
         const inlineCodeColor = config.primaryColor;
 
@@ -272,8 +276,8 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   fontFamily: 'Monaco, Consolas, monospace',
                   fontSize: '0.9em',
                   fontWeight: '600',
-                  backgroundColor: inlineCodeBg, // Dynamic BG
-                  color: inlineCodeColor,         // Dynamic Color
+                  backgroundColor: inlineCodeBg,
+                  color: inlineCodeColor,
                   ...props.style
               }}
               {...props}
@@ -291,7 +295,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           return (
               <section style={{display: 'block', margin: '1.5em 0', textAlign: 'center'}}>
                   <span style={{display: 'block', maxWidth: '100%', overflow: 'hidden', borderRadius: '6px'}}>
-                    {/* The StableImage component now handles data-id passing */}
+                    {/* 图片组件内部负责 data-id 与图片池映射 */}
                     <StableImage {...props} imagePool={imagePool} style={{maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'}} />
                   </span>
                   {caption && (
@@ -309,8 +313,8 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                      ...commonTextStyle,
                      marginBottom: '1.5em',
                      textIndent: config.indent ? '2em' : '0',
-                     minHeight: '1em', // Prevents empty P collapse
-                     ...(props.style || {}) // Merge external styles (important for Blockquote last-child override)
+                     minHeight: '1em', // 防止空段落塌陷导致节奏跳动
+                     ...(props.style || {}) // 合并外部样式，保留块引用末段覆盖能力
                  }}
               >
                   {children}
@@ -321,11 +325,10 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
       h2: ({node, children}: any) => <h2 style={{...themeStyle.h2, fontSize: headingSizes.h2}}>{children}</h2>,
       h3: ({node, children}: any) => <h3 style={{...themeStyle.h3, fontSize: headingSizes.h3}}>{children}</h3>,
       blockquote: ({node, children}: any) => {
-          // Flatten children to handle cases where react-markdown returns mixed arrays of text and elements
+          // 扁平化 children，兼容 react-markdown 混合文本/元素输出
           const childrenArray = React.Children.toArray(children);
           
-          // Find the index of the last valid React element (ignoring text nodes/whitespace)
-          // This ensures we target the actual last paragraph or element
+          // 找到最后一个有效元素节点，避免空白文本干扰
           let lastElementIndex = -1;
           for (let i = childrenArray.length - 1; i >= 0; i--) {
               if (React.isValidElement(childrenArray[i])) {
@@ -337,7 +340,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           return (
             <section style={{...themeStyle.blockquote, ...commonTextStyle}}>
                 {childrenArray.map((child, index) => {
-                        // Apply margin-bottom: 0 only to the last valid element
+                        // 仅最后一个有效节点去掉下边距，避免多余留白
                         if (index === lastElementIndex && React.isValidElement(child)) {
                             const element = child as React.ReactElement<any>;
                             return React.cloneElement(element, {
@@ -353,7 +356,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
       },
       ul: ({node, className, children}: any) => {
-        // Detect task list (Gfm)
+        // 检测 GFM 任务列表
         const isTaskList = className?.includes('contains-task-list');
         return (
             <ul style={{
@@ -375,7 +378,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 marginBottom: '0.2em', 
                 paddingLeft: isTaskList ? '0' : '0.2em',
                 listStyleType: isTaskList ? 'none' : 'inherit',
-                display: isTaskList ? 'flex' : 'list-item', // Use Flex for task list to align checkbox
+                display: isTaskList ? 'flex' : 'list-item', // 任务列表用 flex 以对齐复选框
                 alignItems: isTaskList ? 'flex-start' : undefined
              }}>
                 {children}
@@ -383,7 +386,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
          );
       },
       a: ({node, href, children}: any) => {
-        // Intercept Ruby links in WeChat preview too
+        // 拦截 ruby: 链接，交给注音渲染组件
         if (href && href.startsWith('ruby:')) {
             const reading = href.replace('ruby:', '');
             const decodedReading = decodeURIComponent(reading);
@@ -425,27 +428,27 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
         }`}>
             
-            {/* Simulation Phone Frame */}
+            {/* 手机壳模拟层 */}
             <div className={`relative flex flex-col items-center rounded-[3rem] p-3 shadow-2xl border transition-colors duration-500
                  ${isDarkMode 
                     ? 'bg-[#2c313a] border-[#3e4451] shadow-black/50' 
                     : 'bg-white border-gray-200 shadow-xl'
                  }
             `}> 
-                {/* Screen Wrapper */}
+                {/* 屏幕容器 */}
                 <div className={`relative overflow-hidden rounded-[2.5rem] border-[4px] ${isDarkMode ? 'border-[#1a1d23]' : 'border-gray-50'}`}>
                     
-                    {/* Notch */}
+                    {/* 刘海区域 */}
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
                          <div className={`w-36 h-6 rounded-b-2xl shadow-sm ${isDarkMode ? 'bg-[#1a1d23]' : 'bg-gray-100'}`}></div>
                     </div>
 
-                    {/* Content Container */}
+                    {/* 内容容器 */}
                     <div 
                         className="w-[375px] md:w-[480px] bg-white min-h-[800px] relative flex flex-col"
                         ref={ref}
                     >   
-                        {/* Header */}
+                        {/* 头部信息 */}
                         <div className="px-5 pt-12 pb-2">
                             <h1 style={{fontSize: '22px', fontWeight: 'bold', lineHeight: '1.4', color: '#333', marginBottom: '0.75em', letterSpacing: '0.025em'}}>
                                 {headerInfo.title}
@@ -458,18 +461,19 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                             </div>
                         </div>
 
-                        {/* Main Content */}
+                        {/* 正文区域 */}
                         <div className="flex-1 px-4 pb-12 wechat-content">
                             <ReactMarkdown 
                                 remarkPlugins={[remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter]}
                                 rehypePlugins={[rehypeKatex]}
                                 components={components}
-                                urlTransform={(value) => value} // IMPORTANT: Allow local:// protocol for StableImage
+                                // 允许 local:// 协议，供 StableImage 访问本地缓存图
+                                urlTransform={(value) => value}
                             >
                                 {processedMarkdown}
                             </ReactMarkdown>
 
-                            {/* Footnotes */}
+                            {/* 脚注区域 */}
                             {config.linkReferences && footnotes.length > 0 && (
                                 <div style={{marginTop: '3em', paddingTop: '1.5em', borderTop: '1px dashed #e5e7eb'}}>
                                     <h4 style={{fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '0.75em'}}>引用链接</h4>
@@ -485,7 +489,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                             )}
                         </div>
 
-                        {/* Footer */}
+                        {/* 底部互动区 */}
                         <div style={{padding: '24px 16px', fontSize: '14px', color: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f3f4f6', marginTop: 'auto', backgroundColor: '#fff'}}>
                            <div style={{display: 'flex', gap: '24px'}}>
                               <span style={{display: 'flex', alignItems: 'center', gap: '6px'}}>

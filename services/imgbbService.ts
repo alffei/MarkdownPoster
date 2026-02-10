@@ -1,15 +1,18 @@
+/**
+ * 模块说明：图床上传服务封装，负责与 imgbb API 的上传交互。
+ */
 
 const IMGBB_API_KEY = '6a2f2d51501ecdbf0733c2e13c3b7445';
 const API_URL = 'https://api.imgbb.com/1/upload';
 
 export const uploadToImgbb = async (base64Data: string): Promise<string> => {
-  // Remove the data URL prefix (e.g., "data:image/png;base64,")
+  // 去掉 data URL 头，只提交纯 base64 内容
   const base64Content = base64Data.replace(/^data:image\/[a-z]+;base64,/, "");
   
   const formData = new FormData();
   formData.append('key', IMGBB_API_KEY);
   formData.append('image', base64Content);
-  // Expiration: 600 seconds (10 minutes) as requested
+  // 上传链接设置 10 分钟过期，减少临时图片长期暴露
   formData.append('expiration', '600'); 
 
   try {

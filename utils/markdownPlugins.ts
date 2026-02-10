@@ -1,36 +1,26 @@
+/**
+ * 模块说明：Markdown 插件集合，扩展自定义语法与渲染行为。
+ */
 
 import { visit } from 'unist-util-visit';
 
 /**
- * Remark Plugin: Ruby Annotation
- * Detects syntax: [Base]{Reading} or [Base]^(Reading)
- * 
- * Strategy:
- * Since we want to use a custom React component to render the complex separator logic (dots, etc.),
- * we transform the detected syntax into a standard Markdown "Link" node with a specific protocol.
- * 
- * Transformation:
- * [你好]{nihao}  ->  [你好](ruby:nihao)
- * 
- * The React component will then intercept 'a' tags, check for 'ruby:' protocol, 
- * and render the <ruby> tag instead of an anchor.
+ * Remark 插件：注音语法（Ruby）
+ * 识别写法：[正文]{注音} 或 [正文]^(注音)
+ *
+ * 处理策略：
+ * 不直接在 AST 里注入复杂 HTML，而是转成带 ruby: 协议的 link 节点，
+ * 让 React 渲染阶段统一拦截并渲染为 <ruby>，降低解析复杂度。
+ *
+ * 转换示例：
+ * [你好]{nihao} -> [你好](ruby:nihao)
  */
 export function remarkRuby() {
   return (tree: any) => {
     visit(tree, 'text', (node, index, parent) => {
-      // Regex explanation:
-      // \[          Match opening bracket
-      // (.*?)       Capture Group 1: The Base text (non-greedy)
-      // \]          Match closing bracket
-      // (?:         Non-capturing group for the reading part options
-      //   \{        Option A: {Reading}
-      //     (.*?)   Capture Group 2: Reading inside {}
-      //   \}
-      //   |         OR
-      //   \^\(      Option B: ^(Reading)
-      //     (.*?)   Capture Group 3: Reading inside ^()
-      //   \)
-      // )
+      // 正则说明：
+      // [正文]{注音} 或 [正文]^(注音)
+      // 正文取分组1，注音取分组2或分组3
       const rubyRegex = /\[(.*?)\](?:\{(.*?)\}|\^\((.*?)\))/g;
       
       const value = node.value;
@@ -44,11 +34,11 @@ export function remarkRuby() {
       for (const match of matches) {
         const fullMatch = match[0];
         const baseText = match[1];
-        // Reading is either in group 2 ({}) or group 3 ( ^() )
+        // 注音可能来自 {} 或 ^() 两种写法
         const reading = match[2] || match[3];
         const matchIndex = match.index!;
 
-        // 1. Push text before the match
+        // 1) 先写入匹配前的普通文本
         if (matchIndex > lastIndex) {
           children.push({
             type: 'text',
@@ -56,22 +46,23 @@ export function remarkRuby() {
           });
         }
 
-        // 2. Push the transformed Ruby node (as a Link)
-        // We use a link node so we don't have to enable 'rehype-raw' (dangerous/heavy)
-        // or write custom complex AST handlers. Standard markdown parsers understand links.
+        // 2) 把注音片段转成 link 节点，后续由渲染层拦截 ruby: 协议
+        // 这样可以避免开启 rehype-raw，并减少自定义 AST 处理复杂度
         children.push({
           type: 'link',
           title: null,
-          url: `ruby:${reading}`, // Store reading in URL
+          // 把注音放入 URL，作为跨阶段传递载体
+          url: `ruby:${reading}`,
           children: [
-            { type: 'text', value: baseText } // Store base text as link text
+            // 正文保存在 link 文本里
+            { type: 'text', value: baseText }
           ]
         });
 
         lastIndex = matchIndex + fullMatch.length;
       }
 
-      // 3. Push remaining text
+      // 3) 追加尾部剩余文本
       if (lastIndex < value.length) {
         children.push({
           type: 'text',
@@ -79,19 +70,18 @@ export function remarkRuby() {
         });
       }
 
-      // Replace the current text node with our new array of nodes
+      // 用新的节点数组替换原文本节点
       parent.children.splice(index, 1, ...children);
       
-      // Return new index to skip over the nodes we just inserted 
-      // (prevents infinite loops if visit traverses new nodes immediately)
+      // 返回新索引，避免 visit 立即重扫新节点导致死循环
       return index + children.length;
     });
   };
 }
 
 /**
- * Remark Plugin: Center Directive
- * Support for :::center ... ::: syntax
+ * Remark 插件：居中指令
+ * 支持 :::center ... ::: 语法
  */
 export function remarkCenter() {
   return (tree: any) => {
@@ -111,22 +101,23 @@ export function remarkCenter() {
             style: { 
                 textAlign: 'center', 
                 display: node.type === 'textDirective' ? 'inline-block' : 'block',
-                width: '100%', // Ensure div takes full width to center content effectively
-                listStylePosition: 'inside' // [FIX]: Forces list bullets/numbers to center along with the text
+                // 容器占满宽度，保证 text-align:center 生效
+                width: '100%',
+                // 让列表符号与文字一起居中
+                listStylePosition: 'inside'
             },
             className: 'center-aligned-block'
         };
 
-        // For container directives, we need to enforce centering on child paragraphs
-        // This is crucial because WeChatPreview applies standard styles (like justify/left)
-        // to paragraphs which can override the inherited center alignment from the wrapper div.
+        // 容器指令下，强制子段落 textAlign=center。
+        // 否则下游样式（例如 WeChatPreview 的左对齐/两端对齐）会覆盖继承结果。
         if (node.type === 'containerDirective' && node.children) {
             node.children.forEach((child: any) => {
                 if (child.type === 'paragraph') {
                     const childData = child.data || (child.data = {});
                     const childProps = childData.hProperties || (childData.hProperties = {});
                     
-                    // Merge style
+                    // 合并段落原有样式，避免覆盖其他渲染器产物
                     childProps.style = {
                         ...(childProps.style || {}),
                         textAlign: 'center'

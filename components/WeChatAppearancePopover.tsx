@@ -1,3 +1,7 @@
+/**
+ * 模块说明：公众号外观弹层组件，配置微信排版风格。
+ */
+
 import React from 'react';
 import { WeChatConfig } from '../types';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
@@ -41,7 +45,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         </button>
       </div>
 
-      {/* 1. Layout Category (Segmented Control) */}
+      {/* 1) 排版风格分组（分段按钮） */}
       <div className="mb-6">
         <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">排版风格</label>
         <div className={`flex p-1 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -61,7 +65,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         </div>
       </div>
 
-      {/* 2. Theme Color Picker */}
+      {/* 2) 主题色选择 */}
       <div className="mb-6">
           <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">主题色</label>
           <div className="flex flex-wrap gap-2.5">
@@ -78,7 +82,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
                     style={{ backgroundColor: preset.color }}
                  />
              ))}
-             {/* Custom Color Input */}
+             {/* 自定义颜色输入 */}
              <div className="relative w-6 h-6 rounded-full overflow-hidden shadow-sm border cursor-pointer hover:scale-110 transition-transform flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-400">
                  <input 
                     type="color" 
@@ -91,9 +95,9 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
           </div>
       </div>
 
-      {/* 3. Typography Controls (Font Size & Line Height) */}
+      {/* 3) 排版参数（字号 + 行高） */}
       <div className="mb-5 space-y-3">
-        {/* Font Size */}
+        {/* 字号 */}
         <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">正文字号</label>
             <div className={`flex w-[180px] p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -113,7 +117,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
             </div>
         </div>
 
-        {/* Line Height */}
+        {/* 行高 */}
         <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">行间距</label>
             <div className={`flex w-[180px] p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -134,7 +138,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         </div>
       </div>
 
-      {/* 4. Code Block Theme */}
+      {/* 4) 代码块主题 */}
       <div className="mb-5">
         <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">代码块主题</label>
         <div className="relative">
@@ -157,7 +161,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         </div>
       </div>
 
-      {/* 5. Caption Format */}
+      {/* 5) 图注来源规则 */}
       <div className="mb-5">
         <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">图注格式</label>
         <div className={`flex p-1 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
@@ -177,7 +181,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         </div>
       </div>
 
-      {/* 6. Toggles */}
+      {/* 6) 开关项 */}
       <div className="space-y-3">
         {[
            { label: 'Mac 代码块', key: 'macCodeBlock' },
@@ -206,7 +210,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
         ))}
       </div>
       
-      {/* Reset Button */}
+      {/* 重置按钮 */}
       <div className="mt-6 pt-4 border-t border-dashed border-gray-300/30">
         <button
            onClick={() => setConfig({

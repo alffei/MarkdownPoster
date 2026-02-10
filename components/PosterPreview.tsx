@@ -1,3 +1,6 @@
+/**
+ * 模块说明：海报预览组件，负责渲染、缩放、尺寸调整与画布交互。
+ */
 
 import React, { useMemo, forwardRef, useState, useCallback, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -38,8 +41,7 @@ interface PosterPreviewProps {
 }
 
 /**
- * Inner Component to access Zoom Controls context
- * Now accepts 'scale' as a prop to display dynamic value
+ * 缩放工具条：依赖 TransformWrapper 上下文，显示当前缩放百分比并提供放大/缩小/重置。
  */
 const ZoomControls = ({ isDarkMode, scale }: { isDarkMode: boolean; scale: number }) => {
     const { zoomIn, zoomOut, resetTransform } = useControls();
@@ -65,7 +67,7 @@ const ZoomControls = ({ isDarkMode, scale }: { isDarkMode: boolean; scale: numbe
     );
 };
 
-// Helper for Spacing Class
+// 行高档位映射：将配置值转换为 Tailwind 行高类名。
 const getSpacingClass = (spacing?: string) => {
     switch (spacing) {
         case 'compact': return 'leading-snug'; // Tailwind tight
@@ -102,18 +104,18 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   const paddingClass = getFramePaddingClass(padding);
   const spacingClass = getSpacingClass(spacing);
 
-  // --- Zoom State ---
-  // Initialize with a safe default, will be updated on mount
+  // 缩放百分比用于工具条显示；初始值在 onInit 中同步为真实画布比例。
   const [currentScale, setCurrentScale] = useState(100); 
   const [isPreviewFocused, setIsPreviewFocused] = useState(false);
 
-  // --- Resize Logic ---
+  // 海报宽度支持拖拽与外部预设两种来源。
   const [posterWidth, setPosterWidth] = useState(presetWidth ?? 640);
   const isResizing = useRef(false);
   const posterNodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof presetWidth !== 'number' || !Number.isFinite(presetWidth)) return;
+    // 外部预设宽度变化时，统一做边界裁剪再落地。
     const clamped = Math.max(320, Math.min(2000, presetWidth));
     setPosterWidth(clamped);
   }, [presetWidth, presetWidthToken]);
@@ -130,11 +132,13 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     const diff = presetCoreContentWidth - currentCoreWidth;
     if (Math.abs(diff) <= 1) return;
 
+    // 根据“核心内容宽度”反推整体卡片宽度，保证视觉内容区精确命中目标值。
     setPosterWidth(prev => Math.max(320, Math.min(2000, prev + diff)));
   }, [presetCoreContentWidth, presetWidthToken]);
 
   useEffect(() => {
     if (!onPosterWidthChange) return;
+    // 将当前宽度回传给上层持久化，刷新后可恢复上次调节结果。
     onPosterWidthChange(Math.round(posterWidth));
   }, [posterWidth, onPosterWidthChange]);
 
@@ -151,10 +155,10 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
         const currentX = moveEvent.clientX;
         const diff = currentX - startX;
         
-        // Symmetrical resizing
+        // 双侧对称拉伸：拖动左/右手柄都保持中心视觉稳定。
         const multiplier = direction === 'right' ? 2 : -2;
         
-        // Limits: 320px min, 2000px max
+        // 宽度边界保护，防止拖拽导致内容不可用。
         const newWidth = Math.max(320, Math.min(2000, startWidth + (diff * multiplier)));
         setPosterWidth(newWidth);
     };
@@ -173,7 +177,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     document.body.style.userSelect = 'none'; 
   }, [posterWidth]);
 
-  // Construct inline styles for CSS Variables based on the new Color System
+  // 将主题色映射到 CSS 变量，供卡片与文本在不同主题下复用。
   const cssVariables = useMemo(() => {
       const colors = themeStyle.colors;
       if (!colors) return {};
@@ -182,7 +186,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
           '--mp-primary': colors.primary,
           '--mp-secondary': colors.secondary,
           '--mp-assist': colors.assist,
-          // Text-facing variants (so primary can remain "theme hue", while text stays readable)
+          // 文本展示色：主色保留主题倾向，同时保证正文可读性
           '--mp-primary-text': isDarkTheme ? `color-mix(in srgb, ${colors.primary} 62%, white)` : colors.primary,
           '--mp-secondary-text': isDarkTheme ? `color-mix(in srgb, ${colors.secondary} 70%, white)` : colors.secondary,
       } as React.CSSProperties;
@@ -192,13 +196,14 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     <div 
         tabIndex={0}
         onMouseDownCapture={(e) => {
-            // Ensure the preview region can "gain focus" by click for hint animations.
+            // 允许点击后获取焦点，用于提示态与键盘交互
             e.currentTarget.focus();
         }}
         onFocusCapture={() => setIsPreviewFocused(true)}
         onBlurCapture={(e) => {
             const next = e.relatedTarget as Node | null;
             if (next && e.currentTarget.contains(next)) return;
+            // 仅当焦点真正离开预览区域时，才关闭焦点态。
             setIsPreviewFocused(false);
         }}
         className={`absolute inset-0 overflow-hidden select-none transition-all duration-500 ease-out delay-75 ${
@@ -214,22 +219,22 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
           wheel={{ step: 0.1 }}
           panning={{ velocityDisabled: true }}
           doubleClick={{ disabled: true }}
-          // Sync state on every transform
+          // 每次缩放/平移后同步百分比，保持工具条显示实时准确。
           onTransformed={(e) => setCurrentScale(Math.round(e.state.scale * 100))}
-          // Custom Initialization to Center X and Top-Align Y
+          // 自定义初始位姿：水平居中，顶部留固定间距。
           onInit={(ref) => {
              const { instance } = ref;
              if (instance.contentComponent && instance.wrapperComponent) {
                 const wrapperW = instance.wrapperComponent.offsetWidth;
                 const contentW = instance.contentComponent.offsetWidth;
                 
-                // Initial Scale: 100%
+                // 初始缩放固定 100%，后续由用户手势调整。
                 const targetScale = 1;
                 
-                // Calculate X to center horizontally: (WrapperWidth - ScaledContentWidth) / 2
+                // 计算居中 X 偏移：容器宽度减去内容宽度的一半。
                 const targetX = (wrapperW - contentW * targetScale) / 2;
                 
-                // Set Y to 40px padding from top
+                // 顶部留白，避免初始状态贴边。
                 const targetY = 40;
                 
                 ref.setTransform(targetX, targetY, targetScale);
@@ -239,34 +244,30 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
        >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <>
-              {/* Toolbar floating above canvas */}
+              {/* 悬浮缩放工具条 */}
               <ZoomControls isDarkMode={isDarkMode} scale={currentScale} />
 
               <TransformComponent
-                 // Refined Dot Pattern Background
+                 // 背景网点层：提高画布边界感知，便于调版。
                  wrapperClass={`w-full h-full cursor-grab active:cursor-grabbing transition-colors duration-500
                     ${isDarkMode 
                         ? 'bg-[#13151a] bg-[radial-gradient(#2d333b_1px,transparent_1px)] [background-size:24px_24px]' 
                         : 'bg-[#f8f9fa] bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px]'
                     }
                  `}
-                 // Using flex items-start (Top Align) and justify-start (Left Align)
-                 // We handle centering manually via setTransform in onInit.
-                 // This gives us precise control over the initial position (Top Center).
+                 // 内容对齐由 transform 初始化控制，这里只负责提供稳定容器。
                  contentClass="w-full h-full flex items-start justify-start pt-20 pb-20 box-border"
                  wrapperStyle={{ width: "100%", height: "100%" }}
               >
-                  {/* Container for Centering Inner Content width-wise */}
-                  {/* Since TransformWrapper transforms this whole container, we use w-full to match wrapper width */}
-                  {/* Inside here, we center the poster card */}
+                  {/* 海报外层：保证被 transform 后仍然居中显示 */}
                   <div className="w-full flex justify-center">
-                      {/* The Resizable Poster */}
+                      {/* 可调宽海报主体 */}
                       <div 
                         className="relative transition-shadow duration-300 shadow-2xl shrink-0 origin-top"
                         style={{ width: `${posterWidth}px` }}
                       >
-                        {/* --- RESIZE HANDLES --- */}
-                        {/* Left Handle */}
+                        {/* 宽度拖拽手柄 */}
+                        {/* 左侧手柄 */}
                         <div 
                             className="mp-resize-handle absolute -left-8 top-0 bottom-0 w-8 flex items-center justify-end cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-l-lg"
                             onMouseDown={startResizing('left')}
@@ -279,7 +280,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                             <div className="mp-resize-hint w-1.5 h-16 rounded-full transition-colors" />
                         </div>
 
-                        {/* Right Handle */}
+                        {/* 右侧手柄 */}
                         <div 
                             className="mp-resize-handle absolute -right-8 top-0 bottom-0 w-8 flex items-center justify-start cursor-col-resize group z-50 hover:bg-blue-500/5 transition-colors rounded-r-lg"
                             onMouseDown={startResizing('right')}
@@ -296,7 +297,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                             {Math.round(posterWidth)}px
                         </div>
 
-                        {/* --- ACTUAL POSTER CONTENT (Export Target) --- */}
+                        {/* 实际海报内容（导出目标节点） */}
                         <div 
                             ref={(node) => {
                                 if (typeof ref === 'function') {
@@ -358,7 +359,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                                 }
                                                 return <a href={href} {...props}>{children}</a>;
                                                 },
-                                                // Override pre to force wrapping and hide scrollbars for poster static export
+                                                // 强制代码块换行并隐藏滚动条，保证静态海报导出观感
                                                 pre: ({ node, children, ...props }) => (
                                                     <pre 
                                                         {...props} 

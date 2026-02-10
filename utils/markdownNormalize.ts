@@ -1,3 +1,7 @@
+/**
+ * 模块说明：Markdown 归一化工具，修正规范化前的文本标记格式。
+ */
+
 const STRAIGHT_QUOTE_EMPHASIS_RE = /(\*{2,3})"([^"\n]+)"\1/g;
 const CURLY_QUOTE_EMPHASIS_RE = /(\*{2,3})“([^”\n]+)”\1/g;
 

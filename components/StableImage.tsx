@@ -1,3 +1,6 @@
+/**
+ * 模块说明：稳定图片组件，处理加载失败重试与回退展示。
+ */
 
 import React, { useState, useEffect } from 'react';
 import { getCorsFriendlyUrl } from '../utils/imageUtils';

@@ -1,3 +1,6 @@
+/**
+ * 模块说明：标题样式预设配置，提供标题区域装饰模板。
+ */
 
 import React from 'react';
 
@@ -15,7 +18,7 @@ export const HEADER_PRESETS: Record<string, React.ReactNode> = {
   // ---------------------------------------------------------------------------
   // [MacOS] 经典的红绿灯圆点
   // 通常配合父容器的 space-x-2 使用
-  // Added flex-shrink-0 and aspect-square to prevent squashing in previews
+  // 增加 flex-shrink-0 + aspect-square，避免缩略图中被压扁
   // ---------------------------------------------------------------------------
   'macos': (
     <>
@@ -30,19 +33,19 @@ export const HEADER_PRESETS: Record<string, React.ReactNode> = {
   // ---------------------------------------------------------------------------
   'win11': (
     <div className="flex items-center h-full ml-auto">
-        {/* Minimize */}
+        {/* 最小化 */}
         <div className="w-9 h-full flex items-center justify-center hover:bg-gray-200/50 transition-colors">
             <svg width="10" height="1" viewBox="0 0 10 1" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0 0.5H10" stroke="currentColor" strokeWidth="1"/>
             </svg>
         </div>
-        {/* Maximize */}
+        {/* 最大化 */}
         <div className="w-9 h-full flex items-center justify-center hover:bg-gray-200/50 transition-colors">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="0.5" y="0.5" width="9" height="9" stroke="currentColor" strokeWidth="1"/>
             </svg>
         </div>
-        {/* Close - Background Red */}
+        {/* 关闭（红底） */}
         <div className="w-9 h-full flex items-center justify-center bg-[#e81123] text-white hover:bg-[#c10e1b] transition-colors">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1"/>
@@ -66,14 +69,14 @@ export const HEADER_PRESETS: Record<string, React.ReactNode> = {
   // ---------------------------------------------------------------------------
   'candy': (
     <>
-        {/* Left: Back Arrow (No Text) */}
+        {/* 左侧：返回箭头（无文字） */}
         <div className="flex items-center gap-1 text-pink-500">
              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M15 18l-6-6 6-6"/>
              </svg>
         </div>
         
-        {/* Right: Share + Menu */}
+        {/* 右侧：分享 + 菜单 */}
         <div className="flex items-center gap-4 text-pink-500">
              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>

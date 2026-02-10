@@ -1,3 +1,6 @@
+/**
+ * 模块说明：阅读主题配置源，声明阅读模式可选主题集合。
+ */
 
 import { WritingThemeDef } from '../utils/themeRegistry';
 

@@ -1,19 +1,22 @@
+/**
+ * 模块说明：图片工具函数集合，处理 URL、压缩与二进制转换等操作。
+ */
 
-// Helper to handle CORS for initial fetch
+// 处理跨域图片取数：必要时走代理，避免导出阶段被 CORS 污染
 export const getCorsFriendlyUrl = (url?: string) => {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('local://')) return url;
   try {
     const urlObj = new URL(url);
     if (urlObj.origin === window.location.origin) return url;
-    // Use wsrv.nl as a high-performance, CORS-enabled image proxy
+    // 跨域图片通过代理转为可取资源，导出时可避免 CORS 污染。
     return `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=png`;
   } catch {
     return url;
   }
 };
 
-// Convert Data URI to Blob
+// 数据 URI 转 Blob
 export const dataURItoBlob = (dataURI: string) => {
   const byteString = atob(dataURI.split(',')[1]);
   const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -25,7 +28,7 @@ export const dataURItoBlob = (dataURI: string) => {
   return new Blob([ab], { type: mimeString });
 };
 
-// Get Extension from Mime
+// 根据 MIME 推断文件扩展名
 export const getExtensionFromMime = (mime: string) => {
   switch(mime) {
     case 'image/jpeg': return 'jpg';
@@ -37,19 +40,19 @@ export const getExtensionFromMime = (mime: string) => {
   }
 };
 
-// Helper function for Image Garbage Collection
+// 图片池垃圾回收：仅保留 Markdown 仍在引用的图片
 export const cleanImagePool = (pool: Record<string, string>, markdownContent: string, sourceLabel: string) => {
-    // 1. Identify all image IDs currently used in the Markdown
+    // 1) 收集正文仍在引用的 local 图片 ID。
     const usedIds = new Set<string>();
-    // Regex to find strings like: local://img_123456789
+    // 匹配形如 local://img_xxx 的本地图片引用
     const regex = /local:\/\/(img_[a-z0-9]+)/gi;
     let match;
-    // We strictly use markdownContent here to ensure we only keep what's in the text
+    // 仅依据正文做保留判断，避免“池里残留”无限增长
     while ((match = regex.exec(markdownContent)) !== null) {
       usedIds.add(match[1]); // match[1] is the ID
     }
 
-    // 2. Filter the pool
+    // 2) 仅保留仍被引用的图片，清理孤儿资源。
     const cleanedPool: Record<string, string> = {};
     let removedCount = 0;
     const totalBefore = Object.keys(pool).length;
@@ -64,7 +67,7 @@ export const cleanImagePool = (pool: Record<string, string>, markdownContent: st
     
     const remaining = Object.keys(cleanedPool).length;
 
-    // 3. Log Statistics
+    // 3) 打印清理统计，便于排查图片池泄漏。
     console.group(`🧹 Image GC [${sourceLabel}]`);
     console.log(`%cTotal Images: ${totalBefore}`, 'color: gray');
     console.log(`%cUsed Images:  ${remaining}`, 'color: green; font-weight: bold');
@@ -78,7 +81,7 @@ export const cleanImagePool = (pool: Record<string, string>, markdownContent: st
     return { cleanedPool, removedCount };
 };
 
-// Image Compression Helper
+// 图片压缩：统一为 WebP，控制宽度与体积
 export const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -90,7 +93,7 @@ export const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promi
         let width = img.width;
         let height = img.height;
         
-        // Resize logic: maintain aspect ratio
+        // 按最大宽度等比缩放，防止超大图导致导出体积过高。
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
@@ -105,12 +108,12 @@ export const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promi
             return;
         }
         
-        // Clear canvas instead of filling white to preserve transparency
+        // 先清空画布再绘制，避免透明 PNG 被白底污染。
         ctx.clearRect(0, 0, width, height);
         
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Export as WebP: Supports transparency AND high compression
+        // 导出为 WebP，兼顾透明背景与体积压缩。
         const dataUrl = canvas.toDataURL('image/webp', quality);
         resolve(dataUrl);
       };

@@ -1,3 +1,6 @@
+/**
+ * 模块说明：阅读外观弹层组件，配置阅读主题与字体参数。
+ */
 
 import React from 'react';
 import { WritingTheme, FontSize } from '../types';
@@ -37,7 +40,7 @@ export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> =
         </button>
       </div>
 
-      {/* Theme Selection */}
+      {/* 主题选择 */}
       <div className="mb-6">
         <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">主题配色</label>
         <div className="grid grid-cols-2 gap-2">
@@ -60,7 +63,7 @@ export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> =
         </div>
       </div>
 
-      {/* Font Size */}
+      {/* 字号选择 */}
       <div className="mb-2">
            <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">字号</label>
            <div className={`flex p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>

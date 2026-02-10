@@ -1,3 +1,7 @@
+/**
+ * 模块说明：Markdown 修复工具，自动补全常见语法闭环错误。
+ */
+
 export interface MarkdownRepairResult {
   output: string;
   changes: number;
@@ -14,6 +18,7 @@ const trimLineEndPreserveHardBreak = (line: string): { line: string; changed: bo
   const base = line.slice(0, -trailing.length);
   if (!base) return { line: '', changed: line !== '' };
   const onlySpaces = /^[ ]+$/.test(trailing);
+  // 在 Markdown 中，行尾两个空格代表硬换行；清理空白时要保留这个语义。
   const keepHardBreak = onlySpaces && trailing.length >= 2;
   const next = base + (keepHardBreak ? '  ' : '');
   return { line: next, changed: next !== line };
@@ -46,6 +51,7 @@ export const repairMarkdownBlock = (text: string): MarkdownRepairResult => {
   for (const originalLine of lines) {
     if (isFenceLine(originalLine)) {
       output.push(originalLine);
+      // 代码块内不做文本修复，避免破坏代码原样。
       inFence = !inFence;
       blankRun = 0;
       continue;
@@ -78,6 +84,7 @@ export const repairMarkdownBlock = (text: string): MarkdownRepairResult => {
     if (line.trim() === '') {
       blankRun += 1;
       if (blankRun > 1) {
+        // 连续空行压缩为一行，减少排版噪音。
         changes += 1;
         continue;
       }
@@ -100,4 +107,3 @@ export const repairMarkdownBlock = (text: string): MarkdownRepairResult => {
 
   return { output: outputText, changes };
 };
-

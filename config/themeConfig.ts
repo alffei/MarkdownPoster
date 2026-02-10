@@ -1,3 +1,6 @@
+/**
+ * 模块说明：海报主题配置源，定义 YAML 主题数据与默认映射。
+ */
 
 import { DEFAULT_WRITING_THEME_ID } from './writingThemes';
 

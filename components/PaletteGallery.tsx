@@ -1,3 +1,7 @@
+/**
+ * 模块说明：调色板展示组件，用于开发阶段预览样式组合。
+ */
+
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

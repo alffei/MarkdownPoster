@@ -1,3 +1,6 @@
+/**
+ * 模块说明：项目导出 Hook，负责 Markdown/资源打包与下载。
+ */
 
 import { useState } from 'react';
 import { getCorsFriendlyUrl, getExtensionFromMime, dataURItoBlob } from '../utils/imageUtils';
@@ -43,12 +46,13 @@ export const useProjectExport = ({ markdown, imagePool }: UseProjectExportProps)
         
         for (const match of matches) {
             const fullLinkContent = match[2]; // e.g. 'url "title"' or just 'url'
+            // 同一图片引用只处理一次，避免重复下载/上传。
             if (replacements.has(fullLinkContent)) continue;
 
             let actualUrl = fullLinkContent.trim();
             let titlePart = '';
             
-            // Try to separate URL and title
+            // 拆分 URL 与 title，替换路径时保留标题信息。
             const urlParts = fullLinkContent.match(/^(\S+)(\s+["'].*["'])?$/);
             if (urlParts) {
                 actualUrl = urlParts[1];
@@ -71,6 +75,7 @@ export const useProjectExport = ({ markdown, imagePool }: UseProjectExportProps)
                         replacements.set(fullLinkContent, newContent);
                     }
                 } else if (actualUrl.startsWith('http')) {
+                    // 外链图片通过代理抓取后落盘，导出包可离线复现。
                     const fetchUrl = getCorsFriendlyUrl(actualUrl);
                     const response = await fetch(fetchUrl);
                     if (!response.ok) throw new Error(`Failed to fetch ${actualUrl}`);
@@ -90,6 +95,7 @@ export const useProjectExport = ({ markdown, imagePool }: UseProjectExportProps)
             }
         }
 
+        // 统一回写 Markdown 引用路径，确保压缩包内引用全部本地化。
         replacements.forEach((newPath, oldSrc) => {
             processedMarkdown = processedMarkdown.split(`(${oldSrc})`).join(`(${newPath})`);
         });

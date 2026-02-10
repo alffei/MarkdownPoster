@@ -1,3 +1,7 @@
+/**
+ * 模块说明：智能内容弹层组件，执行语义排版、活动模板和竖排诗转换。
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { AiAction } from '../types';
 import { inferPoemMetaWithAi, processMarkdownWithAi } from '../services/geminiService';
@@ -35,6 +39,7 @@ const parsePoemSource = (text: string) => {
     .filter(Boolean);
 
   if (lines.length >= 2) {
+    // 多行输入时，约定“第一行->左列，第二行->右列”。
     return { right: lines[1], left: lines[0] };
   }
 
@@ -44,6 +49,7 @@ const parsePoemSource = (text: string) => {
     .filter(Boolean);
 
   if (splitByPunctuation.length >= 2) {
+    // 单行输入按常见诗句标点切分，前半句左列、后半句右列。
     return { right: splitByPunctuation[1], left: splitByPunctuation[0] };
   }
 
@@ -56,6 +62,7 @@ const buildVerticalPoem = (right: string, left: string, separator: string) => {
   const maxLen = Math.max(rightChars.length, leftChars.length);
 
   const pad = (chars: string[]) => {
+    // 按最长列补全全角空格，确保两列逐行对齐。
     if (chars.length >= maxLen) return chars;
     return [...chars, ...Array.from({ length: maxLen - chars.length }, () => FULL_WIDTH_SPACE)];
   };
@@ -68,6 +75,7 @@ const buildVerticalPoem = (right: string, left: string, separator: string) => {
   const lines = Array.from({ length: maxLen }, (_, idx) => {
     const rightChar = rightPadded[idx] ?? FULL_WIDTH_SPACE;
     const leftChar = leftPadded[idx] ?? FULL_WIDTH_SPACE;
+    // 每行末尾补两个半角空格，保证 Markdown 强制换行。
     return `${rightChar}${gap}${leftChar}  `;
   });
 
@@ -114,6 +122,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
   useEffect(() => {
     setError(null);
     if (effectiveTemplate === 'poem') {
+      // 切到竖排诗时，用当前文本自动预填左右列，减少手工输入。
       const parsed = parsePoemSource(sourceText);
       setPoemRight(parsed.right);
       setPoemLeft(parsed.left);
@@ -151,6 +160,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
     setError(null);
 
     try {
+      // 语义排版与活动海报共用统一 AI 接口，只切换 action 模板。
       const action = effectiveTemplate === 'event' ? AiAction.EVENT_POSTER : AiAction.SEMANTIC_FORMAT;
       const result = await processMarkdownWithAi(sourceText, action);
       setOutput(result.trim());
@@ -200,6 +210,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
     setIsPoemMetaLoading(true);
     setError(null);
     try {
+      // 识别结果仅回填标题/作者字段，不直接改动正文。
       const meta = await inferPoemMetaWithAi(poemCombined);
       if (meta.title) setPoemTitle(meta.title);
       if (meta.author) setPoemAuthor(meta.author);
@@ -223,6 +234,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
       !poemTitle.trim() &&
       !poemAuthor.trim()
     ) {
+      // 竖排诗在无署名时二次确认，避免误覆盖后无法追溯出处。
       const confirmed = window.confirm('诗名和作者都为空，是否继续插入/替换？');
       if (!confirmed) return;
     }

@@ -1,3 +1,6 @@
+/**
+ * 模块说明：全局类型定义中心，集中声明主题、视图模式与配置结构。
+ */
 
 // Themes and configurations are now loaded dynamically from YAML.
 // We use string types instead of Enums to allow for easy extension without code changes.

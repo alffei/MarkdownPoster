@@ -1,14 +1,18 @@
+/**
+ * 模块说明：主题工具函数集合，处理样式映射、颜色计算与类名生成。
+ */
+
 import React from 'react';
 import { FontSize, LayoutTheme, PaddingSize, ThemeColors } from '../types';
 import { ThemeRegistry, ThemeDef } from './themeRegistry';
 
-// Helper to determine if a theme is dark-based (for Writing Mode contrast)
+// 判断主题是否为暗色基调（用于阅读模式对比度）
 export const isThemeDark = (themeId: string) => {
     const theme = ThemeRegistry.getBorderTheme(themeId);
     return theme?.isDark || false;
 };
 
-// Helper: Convert Hex to HSL for gradient manipulation
+// 十六进制颜色转 HSL：便于做渐变与亮度运算
 function hexToHSL(hex: string) {
     let r = 0, g = 0, b = 0;
     if (hex.length === 4) {
@@ -40,7 +44,7 @@ function hexToHSL(hex: string) {
     return { h, s, l };
 }
 
-// Helper: Convert Hex to RGBA
+// 十六进制颜色转 RGBA
 export const hexToRgba = (hex: string, alpha: number) => {
     let c: any;
     if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
@@ -51,15 +55,15 @@ export const hexToRgba = (hex: string, alpha: number) => {
         c= '0x'+c.join('');
         return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+alpha+')';
     }
-    return hex; // Fallback
+    return hex; // 兜底返回原值
 }
 
-// Override logic to support dynamic colors with rich Mesh Gradients and Theme Customization
+// 主题样式计算：支持用户主色覆盖与多层渐变派生
 export const getThemeStyles = (themeName: string, customColor?: string): ThemeDef & { frameStyle?: React.CSSProperties, cardStyle?: React.CSSProperties, colors?: ThemeColors } => {
     const theme = ThemeRegistry.getBorderTheme(themeName);
     const baseTheme = theme || ThemeRegistry.getBorderTheme(ThemeRegistry.getDefaults().theme)!;
     
-    // Default colors from config, fallback to minimal blue if missing
+    // 主题未提供颜色时使用兜底色，保证样式计算链不断裂。
     let finalColors: ThemeColors = baseTheme.colors || {
         primary: '#3b82f6',
         secondary: '#111827',
@@ -71,26 +75,15 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
     if (shouldApplyCustomColor && customColor) {
         const { h, s, l } = hexToHSL(customColor);
         
-        // Dynamic Color Logic (token-driven, low-saturation by default):
-        // Primary = Custom Color (user choice)
-        // Secondary/Assist = subtle hue shifts with restrained saturation/lightness.
-        
-        // Exception: Neon theme generally keeps its cyan/yellow accents unless explicitly overridden,
-        // but for consistency with the "Custom Color" feature, we will apply the dynamic logic here 
-        // OR preserve the neon vibe if the user didn't ask to change specific slots. 
-        // The requirement is: "Implement dynamic logic... Neon exception".
-        // Neon Exception: We actually want to keep the specific 'assist' (yellow) and 'secondary' (cyan) 
-        // for Neon if we strictly follow the 'match existing prose' rule, BUT if allowCustomColor is true,
-        // the user expects changes. 
-        // Compromise: We use the dynamic logic for all custom-enabled themes including Neon to give the user control,
-        // matching the "Primary/Secondary/Assist" pattern.
+        // 自定义色逻辑：primary 直接使用用户色，secondary/assist 通过色相偏移生成。
+        // 这样既保留主题层次，又不会把所有元素染成同一颜色。
         
         const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
         const baseS = clamp(s, 28, 62);
         const secondaryS = clamp(baseS, 26, 56);
         const assistS = clamp(baseS * 0.55, 14, 34);
 
-        // Keep secondary in the mid range; push assist toward a softer, lighter tint.
+        // 次级色控制在中等明度，辅助色提亮为更柔和层次。
         const secondaryL = clamp(l, 38, 56);
         const assistL = clamp(l + 28, 76, 92);
 
@@ -100,7 +93,7 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
             assist: `hsl(${(h - 32 + 360) % 360}, ${assistS}%, ${assistL}%)`
         };
 
-        // 1. Aurora: Deep, Multi-layered Dark
+        // 极光主题：深色多层渐变，强调氛围和纵深。
         if (themeName === 'Aurora') {
             const sat = 90; 
             const layer1 = `radial-gradient(circle at 0% 0%, hsl(${(h + 40) % 360}, ${sat}%, 45%) 0%, transparent 50%)`;
@@ -117,7 +110,7 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
             };
         }
         
-        // 2. Radiance: Ethereal, Holographic
+        // 流光主题：高亮虹彩渐变，强调流动光感。
         if (themeName === 'Radiance') {
             const sat = 85; 
             const mainL = 60; 
@@ -136,7 +129,7 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
             };
         }
 
-        // 3. Glass: Frosted glass effect with custom tint
+        // 玻璃主题：保留玻璃底层结构，仅替换主色与边框色。
         if (themeName === 'Glass') {
             const lightL = 96;
             const darkL = 92;
@@ -154,7 +147,7 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
             }
         }
 
-        // 4. Neon: Cyberpunk glow
+        // 霓虹主题：在原有风格上叠加用户主色。
         if (themeName === 'Neon') {
             const neonS = 90;
             const neonL = 60; 
@@ -176,19 +169,19 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
     return { ...baseTheme, colors: finalColors };
 };
 
-// Poster Mode: Font Size (Tailwind Classes)
+// 海报模式字号映射（Tailwind 类）
 export const getFontSizeClass = (sizeId: FontSize) => {
     const def = ThemeRegistry.getFontSize(sizeId);
     return def ? def.className : 'prose-base';
 };
 
-// Poster Mode: Layout
+// 海报模式文字风格映射
 export const getLayoutClass = (layoutId: LayoutTheme) => {
     const def = ThemeRegistry.getLayoutTheme(layoutId);
     return def ? def.className : 'font-sans';
 };
 
-// Poster Mode: Padding
+// 海报模式边距映射
 export const getFramePaddingClass = (paddingId: PaddingSize) => {
     const def = ThemeRegistry.getPadding(paddingId);
     return def ? def.className : 'p-6 sm:p-10';

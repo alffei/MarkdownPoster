@@ -1,3 +1,7 @@
+/**
+ * 模块说明：AI 模板与提示词配置，集中维护智能生成模板文本。
+ */
+
 export const EVENT_POSTER_TEMPLATE = [
   "# 活动标题",
   "## 亮点",

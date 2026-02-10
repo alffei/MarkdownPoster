@@ -1,3 +1,7 @@
+/**
+ * 模块说明：对外 SDK 文件，提供第三方页面一键打开并导入 Markdown 的能力。
+ */
+
 (function (global) {
   'use strict';
 
@@ -19,6 +23,7 @@
   }
 
   function toBase64Url(input) {
+    // 地址栏通道要求可安全放入 hash，采用 base64url 编码。
     var bytes = utf8Bytes(input);
     var binary = '';
     var chunkSize = 0x8000;
@@ -43,10 +48,11 @@
       try {
         return new URL(document.currentScript.src).origin;
       } catch (error) {
-        // no-op
+        // 忽略并继续使用回退方案
       }
     }
 
+    // 当前脚本定位不可用时，回退到最后一个匹配 SDK 名称的 script 标签。
     var scripts = document.getElementsByTagName('script');
     for (var i = scripts.length - 1; i >= 0; i -= 1) {
       var src = scripts[i].src;
@@ -54,7 +60,7 @@
         try {
           return new URL(src).origin;
         } catch (error) {
-          // no-op
+          // 忽略并继续回退
         }
       }
     }
@@ -116,6 +122,7 @@
 
         var data = event.data || {};
         if (data.type === 'markdownposter.import.ready') {
+          // 收到 ready 后再发送正文，避免新窗口尚未完成监听。
           if (data.nonce && data.nonce !== nonce) return;
           child.postMessage(
             {
@@ -131,6 +138,7 @@
         }
 
         if (data.type === 'markdownposter.import.ack') {
+          // 应答消息作为最终态，统一收敛调用结果。
           if (data.nonce && data.nonce !== nonce) return;
           if (data.status === 'ok') {
             resolveOnce({ ok: true, channel: 'postMessage', openedUrl: url.toString() });
@@ -169,6 +177,7 @@
     var url = buildImportUrl(opts, source);
     var encoded = toBase64Url(markdown);
     if (encoded.length <= maxUrlEncoded) {
+      // 短文本优先 URL 通道，调用链最短、兼容性最好。
       url.hash = 'mpmd=' + encoded + '&mpv=1';
       return Promise.resolve(openWithUrl(url));
     }
@@ -182,6 +191,7 @@
       });
     }
 
+    // 超过 URL 阈值后切到 postMessage 握手通道。
     return openWithPostMessage(url, markdown, source, opts);
   }
 

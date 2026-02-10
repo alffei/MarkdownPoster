@@ -1,3 +1,6 @@
+/**
+ * 模块说明：预览控制栏组件，管理模板应用与预览侧参数控制。
+ */
 
 import React, { useState, useRef, useEffect } from 'react';
 import { BorderTheme, WritingTheme, FontSize, ViewMode, LayoutTheme, PaddingSize, WatermarkAlign, WeChatConfig, SpacingLevel, PosterTemplate } from '../types';
@@ -10,7 +13,7 @@ interface PreviewControlBarProps {
   currentTheme: BorderTheme;
   setTheme: (theme: BorderTheme) => void;
   
-  // New Layout Props
+  // 版式微调参数
   layoutTheme: LayoutTheme;
   setLayoutTheme: (theme: LayoutTheme) => void;
   padding: PaddingSize;
@@ -45,14 +48,14 @@ interface PreviewControlBarProps {
   customThemeColor?: string;
   setCustomThemeColor?: (color: string) => void;
 
-  // Writing Theme Props
+  // 阅读模式主题参数
   writingTheme?: WritingTheme;
   setWritingTheme?: (theme: WritingTheme) => void;
 
-  // Template Handler
+  // 应用海报模板
   onApplyTemplate?: (template: PosterTemplate) => void;
 
-  // Restore active template defaults (and clear cached tweaks)
+  // 恢复当前模板默认值（并清理该模板缓存的微调）
   onRestorePosterTemplateDefaults?: () => void;
 }
 
@@ -102,7 +105,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
   const [notification, setNotification] = useState<NotificationState | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close popover when clicking outside
+  // 点击外部区域时关闭弹层
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
@@ -113,7 +116,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-dismiss success notifications
+  // 成功提示自动消失，避免长期占位
   useEffect(() => {
     if (notification && notification.type === 'success') {
       const timer = setTimeout(() => {
@@ -125,11 +128,13 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
 
   const handleWeChatCopy = async () => {
     if (!onCopyWeChatHtml) return;
-    setNotification(null); // Clear previous
+    // 先清理旧提示，避免多条状态叠加
+    setNotification(null);
 
     const result = await onCopyWeChatHtml();
     
-    if (!result) return; // Logic cancelled or failed early
+    // 返回空值代表流程提前取消或早期失败
+    if (!result) return;
 
     if (result.success) {
        setNotification({
@@ -138,21 +143,21 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
        });
     } else {
        if (result.failedImages > 0 && result.totalImages > result.failedImages) {
-          // Partial Success
+          // 部分成功：正文复制成功，但部分图片上传失败
           setNotification({
              type: 'warning',
              message: `复制成功，但有 ${result.failedImages} 张图片上传失败。`,
              details: result.errors
           });
        } else if (result.failedImages > 0 && result.failedImages === result.totalImages) {
-          // Total Failure (Images)
+          // 图片全部失败：正文已复制，但图片均上传失败
            setNotification({
              type: 'error',
              message: `复制成功，但所有图片 (${result.failedImages}张) 均上传失败。`,
              details: result.errors
           });
        } else {
-          // Generic Error
+          // 兜底错误
            setNotification({
              type: 'error',
              message: '复制过程中发生未知错误。',
@@ -181,7 +186,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
         : 'border-gray-200 bg-gray-50/90 backdrop-blur-sm text-gray-700'
       }`}>
       
-      {/* Left: Appearance Customize Button */}
+      {/* 左侧：外观设置入口 */}
       <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-10 flex items-center">
         {(viewMode === ViewMode.Poster || viewMode === ViewMode.WeChat || viewMode === ViewMode.Writing) && (
             <div className="relative" ref={popoverRef}>
@@ -247,7 +252,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
         )}
       </div>
 
-      {/* Center: View Mode Switcher */}
+      {/* 中间：预览模式切换 */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
          <div className={`flex p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#282c34] border-[#3e4451]' : 'bg-gray-200/50 border-gray-200'}`}>
             <button
@@ -283,13 +288,13 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
          </div>
       </div>
 
-      {/* Right: Actions Group */}
+      {/* 右侧：主操作按钮区 */}
       <div className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-3">
         
-        {/* Primary Action Button (Export/Copy/Save) */}
+        {/* 主按钮：按当前模式映射为导出/复制/保存 */}
         <div className="relative group">
             {viewMode === ViewMode.Poster ? (
-                // --- POSTER MODE: EXPORT IMAGE ---
+                // 海报模式：导出图片或复制到剪贴板
                 <>
                     <button
                     className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold text-white transition-all shadow-sm ${
@@ -351,7 +356,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                     )}
                 </>
             ) : viewMode === ViewMode.WeChat ? (
-                // --- WECHAT MODE ---
+                // 公众号模式：生成公众号可粘贴内容
                 <>
                     <button
                         onClick={handleWeChatCopy}
@@ -378,7 +383,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                     </button>
                 </>
             ) : (
-                // --- WRITING MODE: SAVE/EXPORT SOURCE ---
+                // 阅读模式：保存 Markdown 或导出工程包
                 <>
                     <button
                     className={`flex items-center gap-2 px-4 py-1.5 rounded text-xs font-bold text-white transition-all shadow-sm ${
@@ -451,7 +456,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
             )}
         </div>
         
-        {/* Global Inline Notification Toast (Shared across modes) */}
+        {/* 全局状态提示：三种模式共用一套提示逻辑 */}
         {notification && (
             <div className={`absolute top-full right-0 mt-3 p-3 rounded-lg shadow-xl border w-[280px] z-50 animate-in fade-in slide-in-from-top-2 select-text cursor-default ${
                 notification.type === 'success' 

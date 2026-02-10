@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --configLoader native",
     "build": "vite build --configLoader native",
-    "preview": "vite preview --configLoader native"
+    "preview": "vite preview --configLoader native",
+    "check:comment-only": "node scripts/check-comment-only.mjs --base HEAD",
+    "check:comment-only:relaxed": "node scripts/check-comment-only.mjs --base HEAD --allow-new-files",
+    "guard:comment": "bash scripts/comment-guard.sh HEAD"
   },
   "dependencies": {
     "katex": "^0.16.27",

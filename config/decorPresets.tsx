@@ -1,3 +1,6 @@
+/**
+ * 模块说明：装饰元素预设配置，提供可复用视觉装饰方案。
+ */
 
 import React from 'react';
 
@@ -15,13 +18,11 @@ export const DECOR_PRESETS: Record<string, React.ReactNode> = {
   // ---------------------------------------------------------------------------
   'ink-corners': (
     <>
-       {/* 
-         Logic:
-         Square size: w-6 (24px).
-         Position: -top-3 (-12px), -left-3 (-12px).
-         Result: The 24px square is centered exactly on the 0,0 corner of the card.
-         Bg color matches card to mask the underlying border corner.
-         Border-2 ensures the square itself has a solid definition contrasting the double border.
+       {/*
+         逻辑说明：
+         - 角标方块尺寸固定，放在边框拐角中心；
+         - 背景色与卡片底色一致，用于遮住底层边框接缝；
+         - 通过更粗边线形成“压角”视觉。
        */}
        <div className="absolute -top-2 -left-2 w-2 h-2 border-2 border-[#57534e] bg-[#fdfbf7] z-10" />
        <div className="absolute -top-2 -right-2 w-2 h-2 border-2 border-[#57534e] bg-[#fdfbf7] z-10" />
@@ -58,13 +59,13 @@ export const DECOR_PRESETS: Record<string, React.ReactNode> = {
   // ---------------------------------------------------------------------------
   'report-brackets': (
     <>
-      {/* Top Left */}
+      {/* 左上角 */}
       <div className="absolute -top-px -left-px w-8 h-8 border-l-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
-      {/* Top Right */}
+      {/* 右上角 */}
       <div className="absolute -top-px -right-px w-8 h-8 border-r-[3px] border-t-[3px] border-[#8B1D1D] z-10 opacity-90" />
-      {/* Bottom Left */}
+      {/* 左下角 */}
       <div className="absolute -bottom-px -left-px w-8 h-8 border-l-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
-      {/* Bottom Right */}
+      {/* 右下角 */}
       <div className="absolute -bottom-px -right-px w-8 h-8 border-r-[3px] border-b-[3px] border-[#8B1D1D] z-10 opacity-90" />
     </>
   )

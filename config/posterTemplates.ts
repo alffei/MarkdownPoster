@@ -1,3 +1,6 @@
+/**
+ * 模块说明：海报模板配置，定义模板默认参数与分组信息。
+ */
 
 import { PosterTemplate, WatermarkAlign } from '../types';
 

@@ -1,3 +1,6 @@
+/**
+ * 模块说明：应用主组件，负责编辑器状态管理、预览模式切换、智能面板交互与外部导入流程。
+ */
 
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
@@ -16,7 +19,7 @@ import { useProjectExport } from './hooks/useProjectExport';
 import { ThemeRegistry } from './utils/themeRegistry';
 import { repairMarkdownBlock } from './utils/markdownRepair';
 
-// LocalStorage Keys
+// 本地存储键名
 const STORAGE_KEY_MARKDOWN = 'markdown_poster_draft';
 const STORAGE_KEY_THEME = 'markdown_poster_theme';
 const STORAGE_KEY_LAYOUT_THEME = 'markdown_poster_layout_theme';
@@ -36,7 +39,7 @@ const STORAGE_KEY_POSTER_TEMPLATE_ID = 'markdown_poster_active_template_id';
 const STORAGE_KEY_POSTER_TEMPLATE_TWEAKS = 'markdown_poster_template_tweaks_v1';
 const STORAGE_KEY_POSTER_WIDTH = 'markdown_poster_width';
 
-// Max History Steps
+// 历史记录上限
 const MAX_HISTORY_SIZE = 10;
 const POEM_CORE_CONTENT_WIDTH = 180;
 const MAX_IMPORT_CHARS = 120000;
@@ -94,55 +97,55 @@ const loadPosterTemplateTweaks = () => {
 export default function App() {
   const defaults = ThemeRegistry.getDefaults();
 
-  // --- STATE INITIALIZATION WITH LOCALSTORAGE ---
+  // --- 基于 LocalStorage 初始化状态 ---
   
-  // 1. Markdown Content
+  // 1) Markdown 正文
   const [markdown, setMarkdown] = useState<string>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_MARKDOWN);
     return saved !== null ? saved : DEFAULT_MARKDOWN;
   });
 
-  // 2. Theme
+  // 2) 海报边框主题
   const [theme, setTheme] = useState<BorderTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_THEME);
     return (saved as BorderTheme) || defaults.theme;
   });
 
-  // 3. Layout Theme
+  // 3) 文字风格主题
   const [layoutTheme, setLayoutTheme] = useState<LayoutTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_LAYOUT_THEME);
     const normalized = (saved as LayoutTheme) || defaults.layout;
-    // Migration: old "Vibrant" -> "Marker" (new text style system)
+    // 兼容旧值：Vibrant 已迁移为 Marker
     return normalized === 'Vibrant' ? 'Marker' : normalized;
   });
 
-  // 3.1 Writing Theme (New)
+  // 3.1) 阅读模式主题
   const [writingTheme, setWritingTheme] = useState<WritingTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_WRITING_THEME);
     return (saved as WritingTheme) || defaults.writingTheme;
   });
 
-  // 4. Font Size
+  // 4) 字号
   const [fontSize, setFontSize] = useState<FontSize>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_FONT_SIZE);
     const normalized = (saved as FontSize) || defaults.fontSize;
-    // Migration: old "XLarge" -> "Large" (font size simplified to 小/中/大)
+    // 兼容旧值：XLarge 已迁移为 Large
     return normalized === 'XLarge' ? 'Large' : normalized;
   });
 
-  // 5. Padding (Now controls Frame Width)
+  // 5) 内容边距（同时影响外框视觉宽度）
   const [padding, setPadding] = useState<PaddingSize>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_PADDING);
     return (saved as PaddingSize) || defaults.padding;
   });
   
-  // 5.1 Spacing (Line Height Level)
+  // 5.1) 行距等级
   const [spacing, setSpacing] = useState<SpacingLevel>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_SPACING);
     return (saved as SpacingLevel) || 'standard';
   });
   
-  // 6. Watermark Settings
+  // 6) 署名/水印设置
   const [showWatermark, setShowWatermark] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_WATERMARK_SHOW);
     return saved !== null ? saved === 'true' : defaults.watermark.show;
@@ -158,27 +161,27 @@ export default function App() {
     return (saved as WatermarkAlign) || defaults.watermark.align;
   });
 
-  // 7. Dark Mode (with system preference fallback)
+  // 7) 深色模式（无本地值时回退系统偏好）
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_DARK_MODE);
     if (saved !== null) {
         return saved === 'true';
     }
-    // Fallback to system preference
+    // 回退系统偏好
     if (typeof window !== 'undefined') {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     return false;
   });
 
-  // 8. View Mode (Poster vs Writing vs WeChat)
+  // 8) 预览模式（海报/阅读/公众号）
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
-    // Default to Writing (Reading Mode) for first-time open; Poster is a secondary step.
+    // 首次进入默认阅读模式，海报是后续加工步骤
     return (saved as ViewMode) || ViewMode.Writing;
   });
   
-  // 9. WeChat Config
+  // 9) 公众号配置
   const [weChatConfig, setWeChatConfig] = useState<WeChatConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_WECHAT_CONFIG);
     if (saved) {
@@ -212,7 +215,7 @@ export default function App() {
     };
   });
 
-  // 10. Image Pool (Virtual File System)
+  // 10) 图片池（本地虚拟文件系统）
   const [imagePool, setImagePool] = useState<Record<string, string>>(() => {
     try {
       const savedPoolStr = localStorage.getItem(STORAGE_KEY_IMAGE_POOL);
@@ -229,22 +232,22 @@ export default function App() {
     }
   });
 
-  // 11. Custom Theme Color (For Aurora/Radiance)
+  // 11) 自定义主色（用于可改色主题）
   const [customThemeColor, setCustomThemeColor] = useState<string>(() => {
       return localStorage.getItem(STORAGE_KEY_CUSTOM_COLOR) || '#6366f1';
   });
 
-  // 12. Modal State
+  // 12) 弹窗状态
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
-  // 13. Active Poster Template + per-template tweaks
+  // 13) 当前海报模板 + 每模板微调快照
   const [activePosterTemplateId, setActivePosterTemplateId] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEY_POSTER_TEMPLATE_ID) || '';
   });
   const posterTemplateTweaksRef = useRef<Record<string, PosterTweaksSnapshot>>(loadPosterTemplateTweaks());
   const isApplyingTemplateRef = useRef(false);
   
-  // --- PERSISTENCE EFFECTS ---
+  // --- 本地持久化副作用 ---
   
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_MARKDOWN, markdown);
@@ -306,7 +309,7 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY_POSTER_TEMPLATE_ID, activePosterTemplateId);
   }, [activePosterTemplateId]);
 
-  // Keep the current poster tweaks snapshot updated for the active theme/template (poster mode only)
+  // 在海报模式下持续更新“当前模板微调快照”
   useEffect(() => {
     if (viewMode !== ViewMode.Poster) return;
     if (isApplyingTemplateRef.current) return;
@@ -374,7 +377,7 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY_POSTER_WIDTH);
   }, [posterWidthPreset]);
   
-  // Refs
+  // 引用句柄
   const exportRef = useRef<HTMLDivElement>(null);
   const weChatRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -473,7 +476,7 @@ export default function App() {
 
     if (!tpl) return;
 
-    // Clear saved tweaks for this template/theme so we truly revert.
+    // 清掉模板和主题的微调缓存，确保“恢复默认”是真恢复
     const map = posterTemplateTweaksRef.current;
     delete map[tpl.id];
     delete map[makeThemeTweaksKey(tpl.borderThemeId)];
@@ -504,9 +507,9 @@ export default function App() {
     }
   }, [activePosterTemplateId, theme, layoutTheme, defaults.watermark.text]);
 
-  // --- TEMPLATE LOGIC ---
+  // --- 模板切换逻辑 ---
   const handleApplyTemplate = useCallback((tpl: PosterTemplate) => {
-    // Save current tweaks before switching away
+    // 切换模板前先保存当前微调
     persistCurrentPosterTweaks();
 
     const map = posterTemplateTweaksRef.current;
@@ -518,8 +521,7 @@ export default function App() {
     try {
       setActivePosterTemplateId(tpl.id);
 
-      // If we have a saved snapshot for this template/theme, restore it;
-      // otherwise fall back to template defaults.
+      // 若已有模板快照则恢复快照，否则回退模板默认参数
       if (saved) {
         applyPosterTweaksSnapshot({
           ...saved,
@@ -542,14 +544,14 @@ export default function App() {
         setCustomThemeColor(tpl.defaults.customThemeColor);
       }
     } finally {
-      // Allow persistence again on next render tick
+      // 下一帧恢复持久化，避免模板应用过程被误写回
       queueMicrotask(() => {
         isApplyingTemplateRef.current = false;
       });
     }
   }, [applyPosterTweaksSnapshot, persistCurrentPosterTweaks]);
 
-  // If we loaded from localStorage without an active template id, infer a reasonable default
+  // 如果本地有样式但没有模板 id，尝试推断当前模板
   useEffect(() => {
     if (activePosterTemplateId) return;
     const tpl =
@@ -558,9 +560,9 @@ export default function App() {
     if (tpl) setActivePosterTemplateId(tpl.id);
   }, [activePosterTemplateId, theme, layoutTheme]);
 
-  // --- SCROLL SYNCHRONIZATION ---
+  // --- 左右滚动同步 ---
   const handleEditorScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    // Disable scroll sync for Poster Mode (Canvas)
+    // 海报模式由画布接管，不参与滚动同步
     if (viewMode === ViewMode.Poster) return;
 
     if (isSyncingRight.current) return;
@@ -577,7 +579,7 @@ export default function App() {
   };
 
   const handlePreviewScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    // Disable scroll sync for Poster Mode (Canvas)
+    // 海报模式由画布接管，不参与滚动同步
     if (viewMode === ViewMode.Poster) return;
 
     const target = e.currentTarget;
@@ -603,7 +605,7 @@ export default function App() {
     if (textareaRef.current) textareaRef.current.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- HISTORY & UTILS (Unchanged) ---
+  // --- 历史记录与通用状态 ---
   const [history, setHistory] = useState<string[]>(() => [markdown]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -616,8 +618,10 @@ export default function App() {
   }, []);
 
   const pushToHistory = useCallback((newText: string) => {
+    // 仅保留“当前历史点之前”的分支，避免在撤销后产生分叉历史。
     const nextHistory = history.slice(0, historyIndex + 1);
     nextHistory.push(newText);
+    // 历史上限固定，超出后从头部裁剪，保持内存稳定。
     if (nextHistory.length > MAX_HISTORY_SIZE) {
       const slicedHistory = nextHistory.slice(nextHistory.length - MAX_HISTORY_SIZE);
       setHistory(slicedHistory);
@@ -647,6 +651,7 @@ export default function App() {
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setMarkdown(newText);
+    // 输入过程做防抖，避免每个按键都写入历史栈导致撤销粒度过碎。
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       if (newText !== history[historyIndex]) pushToHistory(newText);
@@ -662,6 +667,7 @@ export default function App() {
   const cleanupImportAddress = useCallback(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
+    // 导入完成后清理 URL 参数，避免 payload 被复制传播。
     url.hash = '';
     url.searchParams.delete('mp_channel');
     url.searchParams.delete('mp_nonce');
@@ -672,14 +678,17 @@ export default function App() {
 
   const applyExternalImport = useCallback((incomingMarkdown: string, source?: string) => {
     const importBytes = new TextEncoder().encode(incomingMarkdown).length;
+    // 字节阈值用于兜底超大 payload，防止主线程阻塞或本地存储抖动。
     if (importBytes > MAX_IMPORT_BYTES) {
       setRepairNotice({ message: '导入内容体积过大，已拒绝', id: Date.now() });
       return false;
     }
+    // 字符阈值用于防止极长文档导致编辑器渲染压力过大。
     if (incomingMarkdown.length > MAX_IMPORT_CHARS) {
       setRepairNotice({ message: '导入内容过长，已拒绝', id: Date.now() });
       return false;
     }
+    // 外部导入按“新会话”处理，重置历史栈基线，避免与旧文档撤销链混用。
     setMarkdown(incomingMarkdown);
     setHistory([incomingMarkdown]);
     setHistoryIndex(0);
@@ -701,6 +710,7 @@ export default function App() {
     } else {
       const { selectionStart, selectionEnd, value } = textarea;
       const hasSelection = selectionStart !== selectionEnd;
+      // 智能处理支持“选中优先”，未选中时回退到全文。
       const sourceText = hasSelection ? value.substring(selectionStart, selectionEnd) : value;
       setTemplateContext({
         sourceText,
@@ -712,6 +722,7 @@ export default function App() {
     setSmartPanelTemplate(template);
     const panelRect = editorPanelRef.current?.getBoundingClientRect();
     if (panelRect) {
+      // 每次打开都重置到编辑区附近，避免用户上次拖拽后丢失位置。
       setSmartPanelPosition({
         x: Math.round(panelRect.left + 120),
         y: Math.round(panelRect.top + 4),
@@ -732,6 +743,7 @@ export default function App() {
     let newSelectionEnd = selectionStart;
 
     if (mode === 'replace') {
+      // 替换：有选区则替换选区；无选区则整文替换。
       if (hasSelection) {
         newText = currentValue.slice(0, selectionStart) + result + currentValue.slice(selectionEnd);
         newSelectionStart = selectionStart;
@@ -744,6 +756,7 @@ export default function App() {
     }
 
     if (mode === 'insert') {
+      // 插入：插到选区末尾（或光标位置），保留上下文。
       const insertPos = hasSelection ? selectionEnd : selectionStart;
       newText = currentValue.slice(0, insertPos) + result + currentValue.slice(insertPos);
       newSelectionStart = insertPos;
@@ -751,6 +764,7 @@ export default function App() {
     }
 
     if (mode === 'append') {
+      // 追加：自动补齐空行，避免语义块粘连。
       const needsGap = currentValue.trim().length > 0;
       const spacer = needsGap ? (currentValue.endsWith('\n') ? '\n' : '\n\n') : '';
       newText = currentValue + spacer + result;
@@ -769,6 +783,7 @@ export default function App() {
     const poemSourceMatched = options?.sourceTemplate === 'poem' || smartPanelTemplate === 'poem';
     const shouldApplyPoemPreset = poemSourceMatched && mode !== 'append';
     if (shouldApplyPoemPreset) {
+      // 竖排诗在 insert/replace 后自动切到海报模式并套用预设视觉参数。
       const poemTemplate =
         ThemeRegistry.getTemplates().find(t => t.id === 'tpl_minimal_std') ||
         ThemeRegistry.getTemplates().find(t => t.borderThemeId === 'Minimal' && t.layoutThemeId === 'Classic');
@@ -789,6 +804,7 @@ export default function App() {
       if (options?.poemAttribution?.trim()) {
         setWatermarkText(options.poemAttribution.trim());
       } else {
+        // 署名缺失时保留可见占位，提醒后续人工补充。
         setWatermarkText('（待补充诗名） - （待补充作者）');
       }
       setPosterCoreWidthPreset(POEM_CORE_CONTENT_WIDTH);
@@ -801,6 +817,7 @@ export default function App() {
 
   const startSmartPanelDrag = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
+    // 记录鼠标相对面板的偏移，保证拖拽过程不会“跳点”。
     smartPanelDragOffsetRef.current = {
       x: event.clientX - smartPanelPosition.x,
       y: event.clientY - smartPanelPosition.y,
@@ -819,6 +836,7 @@ export default function App() {
       const maxY = Math.max(minY, window.innerHeight - panelHeight - 8);
       const nextX = event.clientX - smartPanelDragOffsetRef.current.x;
       const nextY = event.clientY - smartPanelDragOffsetRef.current.y;
+      // 面板移动限制在可视窗口内，避免拖出屏幕后无法找回。
       setSmartPanelPosition({
         x: Math.min(maxX, Math.max(minX, nextX)),
         y: Math.min(maxY, Math.max(minY, nextY)),
@@ -851,6 +869,7 @@ export default function App() {
     if (!encoded) return;
 
     try {
+      // 地址栏通道：适合短文本，直接从 hash 解码导入。
       const decodedMarkdown = decodeBase64UrlUtf8(encoded);
       const source = new URL(window.location.href).searchParams.get('mp_source') || undefined;
       const imported = applyExternalImport(decodedMarkdown, source);
@@ -876,6 +895,7 @@ export default function App() {
 
     const sendReady = () => {
       if (!window.opener) return;
+      // 消息通道（postMessage）：先发送就绪信号，再等外部页面回传内容。
       window.opener.postMessage(
         {
           type: 'markdownposter.import.ready',
@@ -915,6 +935,7 @@ export default function App() {
         source?: string;
       } | null;
       if (!data || data.type !== 'markdownposter.import.payload') return;
+      // 随机令牌 + 来源域双校验，防止跨页面误投递。
       if (nonce && data.nonce !== nonce) return;
       if (expectedSource && event.origin !== expectedSource) return;
 
@@ -959,7 +980,7 @@ export default function App() {
     }
   };
   
-  // --- EDITOR ACTION HELPERS ---
+  // --- 编辑器操作辅助 ---
   const insertTextAtCursor = (textToInsert: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -1009,54 +1030,54 @@ export default function App() {
     requestAnimationFrame(() => textareaRef.current?.setSelectionRange(newCursorPosStart, newCursorPosEnd));
   };
 
-  // Helper: Get range for full lines encompassing the selection
+  // 获取选区覆盖的完整行范围
   const getLineSelectionRange = (text: string, start: number, end: number) => {
-      // Find start of the first line
+      // 找首行起点
       let lineStart = text.lastIndexOf('\n', start - 1) + 1;
       if (lineStart < 0) lineStart = 0;
 
-      // Find end of the last line
+      // 找末行终点
       let lineEnd = text.indexOf('\n', end);
       if (lineEnd === -1) lineEnd = text.length;
       
       return { start: lineStart, end: lineEnd };
   };
 
-  // Generic handler for Line Prefixes (Headings, Lists, Quotes)
+  // 行前缀处理器（标题/列表/引用共用）
   const handleLinePrefix = (prefix: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     
     const { selectionStart, selectionEnd, value } = textarea;
     
-    // 1. Identify full lines range
+    // 1) 先扩大到整行范围
     const { start: lineStart, end: lineEnd } = getLineSelectionRange(value, selectionStart, selectionEnd);
     
     const selectedContent = value.substring(lineStart, lineEnd);
-    // Split by newline to handle multiple lines
+    // 按行处理，支持多行批量操作
     const lines = selectedContent.split('\n');
 
-    // 2. Determine if we are Adding or Removing
+    // 2) 判定是“加前缀”还是“去前缀”
     const allHavePrefix = lines.every(line => line.startsWith(prefix));
     
     const newLines = lines.map(line => {
         if (allHavePrefix) {
-            // Remove prefix
+            // 去前缀
             return line.startsWith(prefix) ? line.substring(prefix.length) : line;
         } else {
-            // Add prefix
+            // 加前缀
             return prefix + line;
         }
     });
 
     const newContent = newLines.join('\n');
 
-    // 3. Update Text
+    // 3) 更新文本
     const newValue = value.substring(0, lineStart) + newContent + value.substring(lineEnd);
     
     updateMarkdownImmediate(newValue);
 
-    // 4. Restore Selection (select the entire affected block)
+    // 4) 恢复选区，覆盖变更后的整块
     const newSelectionEnd = lineStart + newContent.length;
     requestAnimationFrame(() => {
         if (textareaRef.current) {
@@ -1066,16 +1087,16 @@ export default function App() {
     });
   };
 
-  // Heading Selector Handler
+  // 标题下拉选择处理
   const handleHeadingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const level = e.target.value;
       if (!level) return;
       handleLinePrefix('#'.repeat(parseInt(level)) + ' ');
-      // Reset select value immediately
+      // 立即清空下拉值，避免停留在上次选项
       e.target.value = "";
   };
 
-  // Table Selector Handler
+  // 表格下拉选择处理
   const handleTableChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
       if (!val) return;
@@ -1083,7 +1104,7 @@ export default function App() {
       const [r, c] = val.split('x').map(n => parseInt(n));
       handleInsertTable(r, c);
 
-      // Reset select value
+      // 清空下拉值
       e.target.value = "";
   };
 
@@ -1122,12 +1143,12 @@ export default function App() {
     let newContent = "";
     
     if (isWrapped) {
-        // Unwrap
+        // 去掉 :::center 包裹
         const lines = selectedContent.split('\n');
         const contentLines = lines.filter(l => l.trim() !== ":::center" && l.trim() !== ":::");
         newContent = contentLines.join('\n');
     } else {
-        // Wrap
+        // 添加 :::center 包裹
         newContent = `${startTag}${selectedContent}${endTag}`;
     }
 
@@ -1183,7 +1204,7 @@ export default function App() {
     setRepairNotice({ message: `已修复 ${changeCount} 处`, id: Date.now() });
   };
 
-  // --- IMAGE HANDLER ---
+  // --- 图片导入处理 ---
   const processImageFile = async (file: File) => {
     try {
         const compressedDataUrl = await compressImage(file);
@@ -1257,7 +1278,7 @@ export default function App() {
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
   }, []);
 
-  // --- TOOLBAR SCROLL LOGIC ---
+  // --- 格式工具栏横向滚动控制 ---
   const [formatCanScrollLeft, setFormatCanScrollLeft] = useState(false);
   const [formatCanScrollRight, setFormatCanScrollRight] = useState(false);
   const formatToolbarRef = useRef<HTMLDivElement>(null);
@@ -1315,7 +1336,7 @@ export default function App() {
       </div>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left: Editor Panel */}
+        {/* 左侧：编辑区 */}
         <div 
           ref={editorPanelRef}
           style={{ width: `${leftWidth}%` }}
@@ -1333,12 +1354,12 @@ export default function App() {
               {repairNotice.message}
             </div>
           )}
-          {/* Editor Header (Two Rows) */}
+          {/* 编辑区头部（两行） */}
           <div className="flex flex-col relative z-20 transition-colors duration-500 group/toolbar">
              
-             {/* Row 1: Help & Actions (Keeps Header BG) */}
+             {/* 第一行：帮助与动作（保持头部背景） */}
              <div className={`h-12 flex items-center justify-between px-4 border-b ${isDarkMode ? 'bg-[#1e2227] border-[#181a1f]' : 'bg-[#f4f2eb] border-[#e8e6df]/50'}`}>
-                 {/* Left: Help */}
+                 {/* 左侧：帮助入口 */}
                  <div className="flex items-center">
                     <a href="https://markdown.com.cn/basic-syntax/headings.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[#a8a49c] hover:text-[#8b7e74] transition-colors" title="Markdown 语法帮助">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -1346,7 +1367,7 @@ export default function App() {
                     </a>
                  </div>
 
-                 {/* Right: Actions */}
+                 {/* 右侧：动作按钮 */}
                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                         <button type="button" onClick={handleUndo} disabled={historyIndex <= 0} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 ${historyIndex > 0 ? (isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]') : 'text-gray-300/20 cursor-not-allowed'}`} title="撤销 (Ctrl+Z)"><svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button>
@@ -1369,10 +1390,10 @@ export default function App() {
                  </div>
              </div>
 
-             {/* Row 2: Syntax & Stats (Uses Editor BG color to blend in) */}
+             {/* 第二行：语法工具与统计（融入编辑区背景） */}
              <div className={`h-10 flex items-center justify-between pl-1 pr-4 border-b ${isDarkMode ? 'bg-[#23272e] border-[#181a1f]' : 'bg-[#fdfcf5] border-[#e0e0e0]'}`}>
                  
-                 {/* Syntax Helper */}
+                 {/* 语法工具栏 */}
                  <div className="relative flex-1 min-w-0 h-full mx-1 group/format-scroll">
                     <div className={`absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center w-6 transition-opacity duration-300 pointer-events-none ${formatCanScrollLeft ? 'opacity-100' : 'opacity-0'}`}>
                         <div className={`absolute inset-0 bg-gradient-to-r ${isDarkMode ? 'from-[#23272e] via-[#23272e] to-transparent' : 'from-[#fdfcf5] via-[#fdfcf5] to-transparent'}`} />
@@ -1384,7 +1405,7 @@ export default function App() {
                     <div ref={formatToolbarRef} onScroll={checkFormatScroll} className="flex items-center overflow-x-auto no-scrollbar h-full px-1 gap-1 scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
                         
-                        {/* Heading Selector with Native Select Overlay */}
+                        {/* 标题选择器（原生 select 覆盖层） */}
                         <div className={`relative p-1.5 rounded transition-colors flex-shrink-0 ${isDarkMode ? 'hover:text-[#d4cfbf] hover:bg-[#3e4451] text-gray-500' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="标题">
                              <svg className="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 12h12M6 20V4M18 20V4"/></svg>
                              <select 
@@ -1422,7 +1443,7 @@ export default function App() {
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                         </label>
 
-                        {/* Table Selector with Native Select Overlay */}
+                        {/* 表格选择器（原生 select 覆盖层） */}
                         <div className={`relative p-1.5 rounded transition-colors flex-shrink-0 ${isDarkMode ? 'hover:text-[#d4cfbf] hover:bg-[#3e4451] text-gray-500' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="表格">
                                 <svg className="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
                                 <select 
@@ -1463,7 +1484,7 @@ export default function App() {
                     </div>
                  </div>
 
-                 {/* Stats */}
+                 {/* 字数与日期统计 */}
                  <div className="flex-shrink-0 ml-2 select-none">
                     <span className={`text-[10px] font-medium font-sans tracking-widest transition-colors ${isDarkMode ? 'text-[#5c6370]' : 'text-[#8c8880]/60'}`}>
                       {wordCount} 字 <span className="mx-1 opacity-50">|</span> {dateStr}
@@ -1545,7 +1566,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Resizer Handle */}
+        {/* 中间拖拽分割条 */}
         <div className="w-6 -ml-3 h-full z-20 cursor-col-resize flex items-center justify-center group flex-shrink-0 select-none relative" onMouseDown={startResizing} title="拖动调整宽度">
            <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-px h-full transition-colors ${isDarkMode ? 'bg-transparent group-hover:bg-[#5c6370]/50' : 'bg-transparent group-hover:bg-[#8b7e74]/50'}`} />
            <div className={`relative z-30 w-2 h-16 border shadow-sm flex flex-col items-center justify-center gap-2 transition-all duration-200 ${isDarkMode ? 'bg-[#1e2227] border-[#181a1f] group-hover:bg-[#2c313a] group-hover:border-[#5c6370]' : 'bg-white border-gray-300 group-hover:border-[#8b7e74] group-hover:bg-[#8b7e74]/10'}`}>
@@ -1555,7 +1576,7 @@ export default function App() {
            </div>
         </div>
 
-        {/* Right: Preview Workspace */}
+        {/* 右侧：预览工作区 */}
         <div className={`flex-1 flex flex-col min-w-0 relative transition-colors duration-500 ${isDarkMode ? 'bg-[#1a1d23]' : 'bg-gray-100'}`}>
           
           <PreviewControlBar 
@@ -1656,7 +1677,7 @@ export default function App() {
                onScroll={handlePreviewScroll}
             />
 
-             {/* Back To Top Button */}
+             {/* 回到顶部按钮 */}
              <div className={`absolute bottom-8 right-8 transition-all duration-300 z-50 ${showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                  <button 
                     onClick={scrollToTop}
@@ -1692,7 +1713,7 @@ export default function App() {
         </div>
       )}
       
-      {/* Confirmation Modal for Reset */}
+      {/* 重置确认弹窗 */}
       <ConfirmationModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}

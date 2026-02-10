@@ -1,3 +1,6 @@
+/**
+ * 模块说明：海报导出 Hook，处理截图、复制图片与相关异步状态。
+ */
 
 import React, { useState, RefObject } from 'react';
 import { toPng, toBlob } from 'html-to-image';
@@ -14,7 +17,7 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
   const [isExporting, setIsExporting] = useState(false);
 
   const preparePosterForExport = async () => {
-    // 1. Clean up unused images from pool before export
+    // 导出前先做图片池回收，减少无用内存并避免旧图被误打包。
     const { cleanedPool, removedCount } = cleanImagePool(imagePool, markdown, 'Pre-Export');
     if (removedCount > 0) {
       setImagePool(cleanedPool);
@@ -22,8 +25,7 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
     
     if (!exportRef.current) throw new Error("Export container not found");
     
-    // 2. Wait for all images inside the poster to fully load
-    // This helps prevent blank images in the generated PNG
+    // 等待图片加载完成，避免生成结果出现空白占位图。
     await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 300)));
     const images = Array.from(exportRef.current.querySelectorAll('img')) as HTMLImageElement[];
     await Promise.all(images.map(img => {
@@ -48,7 +50,7 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
             cacheBust: false,
             fetchRequestInit: {
                 cache: 'force-cache',
-                credentials: 'omit', // Important for avoiding CORS issues on public resources
+                credentials: 'omit', // 公网资源导出时尽量避免携带凭证，降低 CORS 风险。
             }
         });
         const link = document.createElement('a');
@@ -76,7 +78,7 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
             cacheBust: false,
             fetchRequestInit: {
                 cache: 'force-cache',
-                credentials: 'omit', // Important for avoiding CORS issues on public resources
+                credentials: 'omit', // 与下载保持一致，确保复制链路也稳定。
             }
         });
         if (!blob) throw new Error("Failed to generate image");

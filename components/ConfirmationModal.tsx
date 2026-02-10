@@ -1,3 +1,6 @@
+/**
+ * 模块说明：通用确认弹窗组件，统一风险操作的二次确认体验。
+ */
 
 import React, { useEffect, useState } from 'react';
 
@@ -37,13 +40,13 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-      {/* Backdrop */}
+      {/* 背景遮罩 */}
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
         onClick={onClose}
       />
       
-      {/* Modal Card */}
+      {/* 弹窗卡片 */}
       <div className={`relative w-full max-w-sm rounded-xl p-6 shadow-2xl transform transition-all duration-200 scale-100 ${
         isOpen ? 'translate-y-0 scale-100' : 'translate-y-4 scale-95'
       } ${

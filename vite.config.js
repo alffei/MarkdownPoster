@@ -1,3 +1,7 @@
+/**
+ * 模块说明：Vite 构建配置，统一开发服务器参数、环境变量注入与路径别名。
+ */
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
