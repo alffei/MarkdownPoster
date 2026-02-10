@@ -41,7 +41,7 @@ const STORAGE_KEY_POSTER_WIDTH = 'markdown_poster_width';
 
 // 历史记录上限
 const MAX_HISTORY_SIZE = 10;
-const POEM_CORE_CONTENT_WIDTH = 180;
+const POEM_POSTER_WIDTH = 320;
 const MAX_IMPORT_CHARS = 120000;
 const MAX_IMPORT_BYTES = 200 * 1024;
 const IMPORT_PM_TIMEOUT_MS = 10000;
@@ -367,7 +367,6 @@ export default function App() {
     return Math.max(320, Math.min(2000, Math.round(parsed)));
   });
   const [posterWidthPresetToken, setPosterWidthPresetToken] = useState(0);
-  const [posterCoreWidthPreset, setPosterCoreWidthPreset] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (typeof posterWidthPreset === 'number' && Number.isFinite(posterWidthPreset)) {
@@ -807,8 +806,7 @@ export default function App() {
         // 署名缺失时保留可见占位，提醒后续人工补充。
         setWatermarkText('（待补充诗名） - （待补充作者）');
       }
-      setPosterCoreWidthPreset(POEM_CORE_CONTENT_WIDTH);
-      setPosterWidthPreset(undefined);
+      setPosterWidthPreset(POEM_POSTER_WIDTH);
       setPosterWidthPresetToken(prev => prev + 1);
     }
 
@@ -1321,6 +1319,11 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [repairNotice]);
 
+  const handlePosterWidthChange = useCallback((nextWidth: number) => {
+    const rounded = Math.max(320, Math.min(2000, Math.round(nextWidth)));
+    setPosterWidthPreset(prev => (prev === rounded ? prev : rounded));
+  }, []);
+
   return (
     <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#23272e]' : 'bg-white'}`}>
       
@@ -1646,11 +1649,7 @@ export default function App() {
                customThemeColor={customThemeColor}
                presetWidth={posterWidthPreset}
                presetWidthToken={posterWidthPresetToken}
-               presetCoreContentWidth={posterCoreWidthPreset}
-               onPosterWidthChange={(nextWidth) => {
-                 const rounded = Math.max(320, Math.min(2000, Math.round(nextWidth)));
-                 setPosterWidthPreset(rounded);
-               }}
+               onPosterWidthChange={handlePosterWidthChange}
              />
 
             {/* --- WRITING MODE RENDER --- */}

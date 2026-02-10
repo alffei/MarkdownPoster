@@ -117,7 +117,7 @@
         </div>
         <div class="row">
           <label for="importPath">Import Path</label>
-          <input id="importPath" type="text" value="/import" />
+          <input id="importPath" type="text" value="/mdp/import" />
         </div>
 
         <textarea id="markdownInput"># MarkdownPoster Import Smoke Test
@@ -146,7 +146,7 @@ This content is sent from an external page.
       </div>
     </div>
 
-    <script src="http://rrzxs.com/mdp/sdk/markdownposter-open.v1.js"></script>
+    <script src="https://rrzxs.com/mdp/sdk/markdownposter-open.v1.js"></script>
     <script>
       const input = document.getElementById("markdownInput");
       const targetOriginInput = document.getElementById("targetOrigin");
@@ -168,7 +168,7 @@ This content is sent from an external page.
           markdown: input.value,
           source: window.location.origin,
           targetOrigin: targetOriginInput.value.trim() || window.location.origin,
-          importPath: importPathInput.value.trim() || "/import"
+          importPath: importPathInput.value.trim() || "/mdp/import"
         });
         setResult(result);
       });

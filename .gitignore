@@ -16,6 +16,8 @@ dist-ssr
 docs
 .vite
 image
+test-results
+playwright-report
 
 # Editor directories and files
 .vscode/*

@@ -5,28 +5,9 @@
 import { AiAction } from "../types";
 import { AI_PROMPTS, EVENT_POSTER_TEMPLATE } from "../config/aiTemplates";
 
-const GLM_ENDPOINT = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-
-const getGlmApiKey = () => {
-  const env = (import.meta as { env?: Record<string, string> }).env ?? {};
-  const keyFromVite =
-    env.VITE_BIGMODEL_API_KEY ||
-    env.VITE_GLM_API_KEY ||
-    env.VITE_API_KEY;
-
-  if (keyFromVite) return keyFromVite;
-
-  if (typeof process !== "undefined") {
-    // 兼容浏览器构建注入与 Node 环境执行两种变量来源。
-    return (
-      process.env.BIGMODEL_API_KEY ||
-      process.env.GLM_API_KEY ||
-      process.env.API_KEY
-    );
-  }
-
-  return undefined;
-};
+const GLM_ENDPOINT =
+  (import.meta as { env?: Record<string, string> }).env?.VITE_GLM_PROXY_URL ||
+  "https://glm-proxy.your-account.workers.dev";
 
 const parseJsonText = (raw: string) => {
   const trimmed = raw.trim();
@@ -44,15 +25,9 @@ const callGlm = async (
   content: string,
   options?: { temperature?: number; maxTokens?: number }
 ) => {
-  const apiKey = getGlmApiKey();
-  if (!apiKey) {
-    throw new Error("Missing GLM API key.");
-  }
-
   const response = await fetch(GLM_ENDPOINT, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

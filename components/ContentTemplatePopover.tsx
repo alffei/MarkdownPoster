@@ -111,6 +111,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'ok' | 'err'>('idle');
   const [isPoemMetaLoading, setIsPoemMetaLoading] = useState(false);
+  const [pendingConfirmMode, setPendingConfirmMode] = useState<TemplateApplyMode | null>(null);
   const [poemRight, setPoemRight] = useState('');
   const [poemLeft, setPoemLeft] = useState('');
   const [poemTitle, setPoemTitle] = useState('');
@@ -226,8 +227,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
     }
   };
 
-  const handleApply = (mode: TemplateApplyMode) => {
-    if (!canApply) return;
+  const applyResult = (mode: TemplateApplyMode) => {
     if (
       effectiveTemplate === 'poem' &&
       (mode === 'insert' || mode === 'replace') &&
@@ -235,8 +235,8 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
       !poemAuthor.trim()
     ) {
       // 竖排诗在无署名时二次确认，避免误覆盖后无法追溯出处。
-      const confirmed = window.confirm('诗名和作者都为空，是否继续插入/替换？');
-      if (!confirmed) return;
+      setPendingConfirmMode(mode);
+      return;
     }
     onApply(activeOutput, mode, {
       sourceTemplate: effectiveTemplate,
@@ -244,8 +244,23 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
     });
   };
 
+  const handleApply = (mode: TemplateApplyMode) => {
+    if (!canApply) return;
+    applyResult(mode);
+  };
+
+  const handleConfirmProceed = () => {
+    if (!pendingConfirmMode) return;
+    const mode = pendingConfirmMode;
+    setPendingConfirmMode(null);
+    onApply(activeOutput, mode, {
+      sourceTemplate: effectiveTemplate,
+      poemAttribution: effectiveTemplate === 'poem' ? poemAttribution.trim() : undefined,
+    });
+  };
+
   return (
-    <div className={`w-[560px] rounded-xl border shadow-xl overflow-hidden ${
+    <div className={`relative w-[560px] rounded-xl border shadow-xl overflow-hidden ${
       isDarkMode
         ? 'bg-[#1e2227] border-[#3e4451] text-[#d4cfbf]'
         : 'bg-white border-gray-200 text-gray-800'
@@ -514,6 +529,47 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
           </button>
         </div>
       </div>
+
+      {pendingConfirmMode && (
+        <div
+          className={`absolute inset-0 z-20 flex items-center justify-center p-4 ${
+            isDarkMode ? 'bg-black/60' : 'bg-black/30'
+          }`}
+        >
+          <div
+            className={`w-full max-w-[360px] rounded-lg border p-4 shadow-xl ${
+              isDarkMode
+                ? 'bg-[#1f242c] border-[#3e4451] text-[#d4cfbf]'
+                : 'bg-white border-gray-200 text-gray-800'
+            }`}
+          >
+            <div className="text-sm font-semibold">确认继续操作？</div>
+            <div className={`mt-2 text-xs leading-relaxed ${isDarkMode ? 'text-[#aab1bc]' : 'text-gray-600'}`}>
+              当前诗名和作者都为空。继续后将按已填内容写入，署名可能为空。
+            </div>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingConfirmMode(null)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
+                  isDarkMode ? 'bg-[#2c313a] hover:bg-[#3e4451]' : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmProceed}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold ${
+                  isDarkMode ? 'bg-[#e5c07b] text-[#1e2227] hover:bg-[#d19a66]' : 'bg-[#997343] text-white hover:bg-[#85633e]'
+                }`}
+              >
+                继续
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

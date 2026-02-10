@@ -67,9 +67,44 @@
     return global.location.origin;
   }
 
+  function resolveScriptUrl() {
+    if (document.currentScript && document.currentScript.src) {
+      try {
+        return new URL(document.currentScript.src);
+      } catch (error) {
+        // 忽略并继续使用回退方案
+      }
+    }
+
+    var scripts = document.getElementsByTagName('script');
+    for (var i = scripts.length - 1; i >= 0; i -= 1) {
+      var src = scripts[i].src;
+      if (src && src.indexOf('markdownposter-open') >= 0) {
+        try {
+          return new URL(src);
+        } catch (error) {
+          // 忽略并继续回退
+        }
+      }
+    }
+    return null;
+  }
+
+  function inferImportPath(scriptUrl) {
+    if (!scriptUrl) return DEFAULTS.importPath;
+    var pathname = scriptUrl.pathname || '';
+    var sdkIndex = pathname.indexOf('/sdk/');
+    if (sdkIndex <= 0) return DEFAULTS.importPath;
+    var basePath = pathname.slice(0, sdkIndex);
+    if (!basePath) return DEFAULTS.importPath;
+    return basePath + '/import';
+  }
+
   function buildImportUrl(opts, source) {
-    var base = opts.targetOrigin || resolveScriptOrigin();
-    var path = opts.importPath || DEFAULTS.importPath;
+    var scriptUrl = resolveScriptUrl();
+    var base = opts.targetOrigin || (scriptUrl ? scriptUrl.origin : resolveScriptOrigin());
+    // 未显式传 importPath 时，自动从 SDK 路径推断（如 /mdp/sdk/* -> /mdp/import）。
+    var path = opts.importPath || inferImportPath(scriptUrl);
     var url = new URL(path, base);
     if (source) {
       url.searchParams.set('mp_source', source);

@@ -36,7 +36,6 @@ interface PosterPreviewProps {
   customThemeColor?: string;
   presetWidth?: number;
   presetWidthToken?: number;
-  presetCoreContentWidth?: number;
   onPosterWidthChange?: (width: number) => void;
 }
 
@@ -92,7 +91,6 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   customThemeColor,
   presetWidth,
   presetWidthToken,
-  presetCoreContentWidth,
   onPosterWidthChange
 }, ref) => {
   
@@ -119,22 +117,6 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     const clamped = Math.max(320, Math.min(2000, presetWidth));
     setPosterWidth(clamped);
   }, [presetWidth, presetWidthToken]);
-
-  useEffect(() => {
-    if (typeof presetCoreContentWidth !== 'number' || !Number.isFinite(presetCoreContentWidth)) return;
-    const posterNode = posterNodeRef.current;
-    if (!posterNode) return;
-
-    const computed = window.getComputedStyle(posterNode);
-    const paddingLeft = parseFloat(computed.paddingLeft || '0') || 0;
-    const paddingRight = parseFloat(computed.paddingRight || '0') || 0;
-    const currentCoreWidth = posterNode.clientWidth - paddingLeft - paddingRight;
-    const diff = presetCoreContentWidth - currentCoreWidth;
-    if (Math.abs(diff) <= 1) return;
-
-    // 根据“核心内容宽度”反推整体卡片宽度，保证视觉内容区精确命中目标值。
-    setPosterWidth(prev => Math.max(320, Math.min(2000, prev + diff)));
-  }, [presetCoreContentWidth, presetWidthToken]);
 
   useEffect(() => {
     if (!onPosterWidthChange) return;
