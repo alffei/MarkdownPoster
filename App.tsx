@@ -39,6 +39,27 @@ const STORAGE_KEY_POSTER_WIDTH = 'markdown_poster_width';
 // Max History Steps
 const MAX_HISTORY_SIZE = 10;
 const POEM_CORE_CONTENT_WIDTH = 180;
+const MAX_IMPORT_CHARS = 120000;
+const MAX_IMPORT_BYTES = 200 * 1024;
+const IMPORT_PM_TIMEOUT_MS = 10000;
+
+const decodeBase64UrlUtf8 = (encoded: string): string => {
+  const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padLength = (4 - (normalized.length % 4)) % 4;
+  const padded = normalized + '='.repeat(padLength);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+};
+
+const isImportRoute = () => {
+  if (typeof window === 'undefined') return false;
+  const path = window.location.pathname.toLowerCase();
+  return path === '/import' || path.endsWith('/import');
+};
 
 type PosterTweaksSnapshot = {
   theme: BorderTheme;
@@ -638,6 +659,36 @@ export default function App() {
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
   };
 
+  const cleanupImportAddress = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.hash = '';
+    url.searchParams.delete('mp_channel');
+    url.searchParams.delete('mp_nonce');
+    url.searchParams.delete('mp_source');
+    const next = `${url.pathname}${url.search ? url.search : ''}`;
+    window.history.replaceState({}, document.title, next);
+  }, []);
+
+  const applyExternalImport = useCallback((incomingMarkdown: string, source?: string) => {
+    const importBytes = new TextEncoder().encode(incomingMarkdown).length;
+    if (importBytes > MAX_IMPORT_BYTES) {
+      setRepairNotice({ message: '导入内容体积过大，已拒绝', id: Date.now() });
+      return false;
+    }
+    if (incomingMarkdown.length > MAX_IMPORT_CHARS) {
+      setRepairNotice({ message: '导入内容过长，已拒绝', id: Date.now() });
+      return false;
+    }
+    setMarkdown(incomingMarkdown);
+    setHistory([incomingMarkdown]);
+    setHistoryIndex(0);
+    const sourceText = source ? `（来源：${source}）` : '';
+    setRepairNotice({ message: `已导入外部内容${sourceText}`, id: Date.now() });
+    requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
+    return true;
+  }, []);
+
   const openTemplatePopover = (template: TemplateKind = 'semantic') => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -783,6 +834,123 @@ export default function App() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDraggingSmartPanel]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const hashRaw = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    if (!hashRaw) return;
+
+    const hashParams = new URLSearchParams(hashRaw);
+    let encoded = hashParams.get('mpmd') || '';
+    if (!encoded && hashRaw && !hashRaw.includes('=')) {
+      encoded = hashRaw;
+    }
+    if (!encoded) return;
+
+    try {
+      const decodedMarkdown = decodeBase64UrlUtf8(encoded);
+      const source = new URL(window.location.href).searchParams.get('mp_source') || undefined;
+      const imported = applyExternalImport(decodedMarkdown, source);
+      if (imported) {
+        cleanupImportAddress();
+      }
+    } catch (error) {
+      console.error('Failed to decode URL import payload', error);
+      setRepairNotice({ message: '导入内容解码失败', id: Date.now() });
+    }
+  }, [applyExternalImport, cleanupImportAddress]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!isImportRoute()) return;
+
+    const url = new URL(window.location.href);
+    const channel = url.searchParams.get('mp_channel');
+    if (channel !== 'pm') return;
+
+    const nonce = url.searchParams.get('mp_nonce') || '';
+    const expectedSource = url.searchParams.get('mp_source') || '';
+
+    const sendReady = () => {
+      if (!window.opener) return;
+      window.opener.postMessage(
+        {
+          type: 'markdownposter.import.ready',
+          nonce,
+          version: 1,
+        },
+        '*'
+      );
+    };
+
+    const respond = (status: 'ok' | 'error', code?: string, message?: string, targetOrigin = '*') => {
+      if (!window.opener) return;
+      window.opener.postMessage(
+        {
+          type: 'markdownposter.import.ack',
+          nonce,
+          status,
+          code,
+          message,
+        },
+        targetOrigin
+      );
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      setRepairNotice({ message: '等待外部内容超时，请重试', id: Date.now() });
+    }, IMPORT_PM_TIMEOUT_MS);
+    const readyInterval = window.setInterval(sendReady, 800);
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!window.opener || event.source !== window.opener) return;
+
+      const data = event.data as {
+        type?: string;
+        nonce?: string;
+        markdown?: string;
+        source?: string;
+      } | null;
+      if (!data || data.type !== 'markdownposter.import.payload') return;
+      if (nonce && data.nonce !== nonce) return;
+      if (expectedSource && event.origin !== expectedSource) return;
+
+      const markdownPayload = typeof data.markdown === 'string' ? data.markdown : '';
+      if (!markdownPayload) {
+        respond('error', 'empty_markdown', 'markdown is empty', event.origin || '*');
+        return;
+      }
+      if (markdownPayload.length > MAX_IMPORT_CHARS) {
+        respond('error', 'too_large', 'markdown too large', event.origin || '*');
+        setRepairNotice({ message: '导入内容过长，已拒绝', id: Date.now() });
+        return;
+      }
+
+      window.clearTimeout(timeoutId);
+      window.clearInterval(readyInterval);
+
+      const source = typeof data.source === 'string' ? data.source : event.origin;
+      const imported = applyExternalImport(markdownPayload, source);
+      if (imported) {
+        cleanupImportAddress();
+        respond('ok', undefined, undefined, event.origin || '*');
+        return;
+      }
+      respond('error', 'import_failed', 'import failed', event.origin || '*');
+    };
+
+    window.addEventListener('message', handleMessage);
+    sendReady();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(readyInterval);
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [applyExternalImport, cleanupImportAddress]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
