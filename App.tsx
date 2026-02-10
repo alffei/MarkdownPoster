@@ -803,8 +803,8 @@ export default function App() {
       if (options?.poemAttribution?.trim()) {
         setWatermarkText(options.poemAttribution.trim());
       } else {
-        // 署名缺失时保留可见占位，提醒后续人工补充。
-        setWatermarkText('（待补充诗名） - （待补充作者）');
+        // 署名缺失时不显示占位文案，避免出现误导性的“待补充”信息。
+        setWatermarkText('');
       }
       setPosterWidthPreset(POEM_POSTER_WIDTH);
       setPosterWidthPresetToken(prev => prev + 1);
