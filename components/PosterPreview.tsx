@@ -109,18 +109,25 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   // 海报宽度支持拖拽与外部预设两种来源。
   const [posterWidth, setPosterWidth] = useState(presetWidth ?? 640);
   const isResizing = useRef(false);
+  const posterWidthRef = useRef(posterWidth);
   const posterNodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isResizing.current) return;
     if (typeof presetWidth !== 'number' || !Number.isFinite(presetWidth)) return;
     // 外部预设宽度变化时，统一做边界裁剪再落地。
     const clamped = Math.max(320, Math.min(2000, presetWidth));
-    setPosterWidth(clamped);
+    setPosterWidth(prev => (Math.abs(prev - clamped) <= 0.5 ? prev : clamped));
   }, [presetWidth, presetWidthToken]);
 
   useEffect(() => {
+    posterWidthRef.current = posterWidth;
+  }, [posterWidth]);
+
+  useEffect(() => {
     if (!onPosterWidthChange) return;
-    // 将当前宽度回传给上层持久化，刷新后可恢复上次调节结果。
+    if (isResizing.current) return;
+    // 非拖拽场景（如模板自动设宽）仍需回传给上层持久化。
     onPosterWidthChange(Math.round(posterWidth));
   }, [posterWidth, onPosterWidthChange]);
 
@@ -142,11 +149,16 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
         
         // 宽度边界保护，防止拖拽导致内容不可用。
         const newWidth = Math.max(320, Math.min(2000, startWidth + (diff * multiplier)));
+        posterWidthRef.current = newWidth;
         setPosterWidth(newWidth);
     };
 
     const onMouseUp = () => {
         isResizing.current = false;
+        if (onPosterWidthChange) {
+            // 拖拽结束后再一次性提交，避免拖拽过程与上层回写互相抖动。
+            onPosterWidthChange(Math.round(posterWidthRef.current));
+        }
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
         document.body.style.cursor = 'default';
@@ -157,7 +169,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     document.addEventListener('mouseup', onMouseUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none'; 
-  }, [posterWidth]);
+  }, [posterWidth, onPosterWidthChange]);
 
   // 将主题色映射到 CSS 变量，供卡片与文本在不同主题下复用。
   const cssVariables = useMemo(() => {
