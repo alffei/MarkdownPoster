@@ -18,6 +18,34 @@ import { HEADER_PRESETS } from '../config/headerPresets';
 import { DECOR_PRESETS } from '../config/decorPresets'; 
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
 
+const DEFAULT_POSTER_WIDTH = 640;
+
+type AspectRatioOption = {
+  id: string;
+  label: string;
+  w: number;
+  h: number;
+};
+
+const VERTICAL_RATIO_OPTIONS: AspectRatioOption[] = [
+  { id: '1-1', label: '1:1', w: 1, h: 1 },
+  { id: '3-4', label: '3:4', w: 3, h: 4 },
+  { id: '2-3', label: '2:3', w: 2, h: 3 },
+  { id: '9-16', label: '9:16', w: 9, h: 16 },
+];
+
+const HORIZONTAL_RATIO_OPTIONS: AspectRatioOption[] = [
+  { id: '1-1-h', label: '1:1', w: 1, h: 1 },
+  { id: '4-3', label: '4:3', w: 4, h: 3 },
+  { id: '3-2', label: '3:2', w: 3, h: 2 },
+  { id: '16-9', label: '16:9', w: 16, h: 9 },
+];
+
+const ALL_RATIO_OPTIONS: AspectRatioOption[] = [
+  ...VERTICAL_RATIO_OPTIONS,
+  ...HORIZONTAL_RATIO_OPTIONS,
+];
+
 interface PosterPreviewProps {
   markdown: string;
   theme: BorderTheme;
@@ -107,10 +135,23 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   const [isPreviewFocused, setIsPreviewFocused] = useState(false);
 
   // 海报宽度支持拖拽与外部预设两种来源。
-  const [posterWidth, setPosterWidth] = useState(presetWidth ?? 640);
+  const [posterWidth, setPosterWidth] = useState(presetWidth ?? DEFAULT_POSTER_WIDTH);
   const isResizing = useRef(false);
   const posterWidthRef = useRef(posterWidth);
   const posterNodeRef = useRef<HTMLDivElement>(null);
+  const [activeAspectRatioId, setActiveAspectRatioId] = useState<string | null>(null);
+  const [ratioPanel, setRatioPanel] = useState<'landscape' | 'portrait' | null>(null);
+  const ratioToolbarRef = useRef<HTMLDivElement>(null);
+  const ratioPanelRef = useRef<HTMLDivElement>(null);
+
+  const activeAspectRatio = useMemo(
+    () => ALL_RATIO_OPTIONS.find(option => option.id === activeAspectRatioId) || null,
+    [activeAspectRatioId]
+  );
+  const posterHeight = useMemo(() => {
+    if (!activeAspectRatio) return undefined;
+    return Math.round(posterWidth * (activeAspectRatio.h / activeAspectRatio.w));
+  }, [activeAspectRatio, posterWidth]);
 
   useEffect(() => {
     if (isResizing.current) return;
@@ -171,6 +212,43 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     document.body.style.userSelect = 'none'; 
   }, [posterWidth, onPosterWidthChange]);
 
+  const ratioPanelOptions = ratioPanel === 'landscape' ? HORIZONTAL_RATIO_OPTIONS : VERTICAL_RATIO_OPTIONS;
+
+  const handleSelectRatio = (option: AspectRatioOption) => {
+    setActiveAspectRatioId(option.id);
+    setRatioPanel(null);
+  };
+
+  const handleResetPosterSize = () => {
+    setRatioPanel(null);
+    setActiveAspectRatioId(null);
+    posterWidthRef.current = DEFAULT_POSTER_WIDTH;
+    setPosterWidth(DEFAULT_POSTER_WIDTH);
+    if (onPosterWidthChange) {
+      onPosterWidthChange(DEFAULT_POSTER_WIDTH);
+    }
+  };
+
+  // 点击预览区其它位置时，自动收起比例二级菜单。
+  useEffect(() => {
+    if (!ratioPanel) return;
+
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+
+      if (ratioToolbarRef.current?.contains(target)) return;
+      if (ratioPanelRef.current?.contains(target)) return;
+
+      setRatioPanel(null);
+    };
+
+    document.addEventListener('mousedown', handleDocumentMouseDown, true);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentMouseDown, true);
+    };
+  }, [ratioPanel]);
+
   // 将主题色映射到 CSS 变量，供卡片与文本在不同主题下复用。
   const cssVariables = useMemo(() => {
       const colors = themeStyle.colors;
@@ -185,6 +263,56 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
           '--mp-secondary-text': isDarkTheme ? `color-mix(in srgb, ${colors.secondary} 70%, white)` : colors.secondary,
       } as React.CSSProperties;
   }, [themeStyle.colors, themeStyle.isDark]);
+
+  // 悬浮尺寸菜单配色：跟随当前预览主题色，不再沿用编辑区配色。
+  const ratioMenuPalette = useMemo(() => {
+    const colors = themeStyle.colors;
+    const dark = Boolean(themeStyle.isDark);
+
+    if (!colors) {
+      return {
+        barBg: isDarkMode ? '#2c313a' : '#f1efea',
+        barText: isDarkMode ? '#d4cfbf' : '#6f6558',
+        barBorder: isDarkMode ? '#3e4451' : '#e2ddd2',
+        hoverBg: isDarkMode ? '#3e4451' : '#ffffff',
+        activeBg: isDarkMode ? '#3e4451' : '#ffffff',
+        activeText: isDarkMode ? '#e5c07b' : '#c28c2c',
+        panelBg: isDarkMode ? '#252a32' : '#ffffff',
+        panelText: isDarkMode ? '#d4cfbf' : '#374151',
+        panelBorder: isDarkMode ? '#3e4451' : '#e5e7eb',
+        tooltipBg: isDarkMode ? '#1e2227' : '#ffffff',
+        tooltipText: isDarkMode ? '#d4cfbf' : '#6f6558',
+      };
+    }
+
+    return dark
+      ? {
+          barBg: `color-mix(in srgb, ${colors.secondary} 72%, black)`,
+          barText: `color-mix(in srgb, ${colors.assist} 54%, white)`,
+          barBorder: `color-mix(in srgb, ${colors.assist} 24%, transparent)`,
+          hoverBg: `color-mix(in srgb, ${colors.primary} 26%, transparent)`,
+          activeBg: `color-mix(in srgb, ${colors.primary} 40%, transparent)`,
+          activeText: `color-mix(in srgb, ${colors.primary} 60%, white)`,
+          panelBg: `color-mix(in srgb, ${colors.secondary} 78%, black)`,
+          panelText: `color-mix(in srgb, ${colors.assist} 62%, white)`,
+          panelBorder: `color-mix(in srgb, ${colors.assist} 28%, transparent)`,
+          tooltipBg: `color-mix(in srgb, ${colors.secondary} 84%, black)`,
+          tooltipText: `color-mix(in srgb, ${colors.assist} 62%, white)`,
+        }
+      : {
+          barBg: `color-mix(in srgb, ${colors.assist} 16%, white)`,
+          barText: `color-mix(in srgb, ${colors.secondary} 76%, ${colors.primary})`,
+          barBorder: `color-mix(in srgb, ${colors.assist} 24%, transparent)`,
+          hoverBg: `color-mix(in srgb, ${colors.primary} 8%, white)`,
+          activeBg: `color-mix(in srgb, ${colors.primary} 14%, white)`,
+          activeText: `color-mix(in srgb, ${colors.primary} 88%, ${colors.secondary})`,
+          panelBg: `color-mix(in srgb, ${colors.assist} 10%, white)`,
+          panelText: `color-mix(in srgb, ${colors.secondary} 84%, ${colors.primary})`,
+          panelBorder: `color-mix(in srgb, ${colors.assist} 26%, transparent)`,
+          tooltipBg: `color-mix(in srgb, ${colors.secondary} 92%, white)`,
+          tooltipText: '#ffffff',
+        };
+  }, [themeStyle.colors, themeStyle.isDark, isDarkMode]);
 
   return (
     <div 
@@ -206,6 +334,150 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                 : 'opacity-0 scale-95 z-0 pointer-events-none'
         } ${isPreviewFocused ? 'mp-preview-focused' : ''}`}
     >
+       {/* 海报尺寸浮动菜单：样式与编辑区侧边图标条一致。 */}
+       <div
+         ref={ratioToolbarRef}
+         className="absolute right-6 top-24 z-[80] flex flex-col items-center gap-2 rounded-full px-1.5 py-2 shadow-lg pointer-events-auto border"
+         style={{
+           backgroundColor: ratioMenuPalette.barBg,
+           color: ratioMenuPalette.barText,
+           borderColor: ratioMenuPalette.barBorder,
+         }}
+       >
+        <button
+          type="button"
+          data-testid="ratio-menu-portrait"
+          onClick={() => setRatioPanel(prev => (prev === 'portrait' ? null : 'portrait'))}
+          className="group relative w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+          style={{
+            backgroundColor: ratioPanel === 'portrait' ? ratioMenuPalette.activeBg : undefined,
+            color: ratioPanel === 'portrait' ? ratioMenuPalette.activeText : undefined,
+          }}
+          onMouseEnter={(e) => {
+            if (ratioPanel === 'portrait') return;
+            e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+          }}
+          onMouseLeave={(e) => {
+            if (ratioPanel === 'portrait') return;
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+          title="竖版尺寸"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="8" y="4" width="8" height="16" rx="2" strokeWidth={2} />
+          </svg>
+          <span
+            className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 shadow-sm border"
+            style={{
+              backgroundColor: ratioMenuPalette.tooltipBg,
+              color: ratioMenuPalette.tooltipText,
+              borderColor: ratioMenuPalette.barBorder,
+            }}
+          >
+            竖版
+          </span>
+        </button>
+        <button
+          type="button"
+          data-testid="ratio-menu-landscape"
+          onClick={() => setRatioPanel(prev => (prev === 'landscape' ? null : 'landscape'))}
+          className="group relative w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+          style={{
+            backgroundColor: ratioPanel === 'landscape' ? ratioMenuPalette.activeBg : undefined,
+            color: ratioPanel === 'landscape' ? ratioMenuPalette.activeText : undefined,
+          }}
+          onMouseEnter={(e) => {
+            if (ratioPanel === 'landscape') return;
+            e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+          }}
+          onMouseLeave={(e) => {
+            if (ratioPanel === 'landscape') return;
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+          title="横版尺寸"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="4" y="8" width="16" height="8" rx="2" strokeWidth={2} />
+          </svg>
+          <span
+            className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 shadow-sm border"
+            style={{
+              backgroundColor: ratioMenuPalette.tooltipBg,
+              color: ratioMenuPalette.tooltipText,
+              borderColor: ratioMenuPalette.barBorder,
+            }}
+          >
+            横版
+          </span>
+        </button>
+        <button
+          type="button"
+          data-testid="ratio-reset"
+          onClick={handleResetPosterSize}
+          className="group relative w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+          title="重置尺寸"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M5 9a7 7 0 0111.2-2.4L20 9M19 15a7 7 0 01-11.2 2.4L4 15" />
+          </svg>
+          <span
+            className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[10px] whitespace-nowrap opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 shadow-sm border"
+            style={{
+              backgroundColor: ratioMenuPalette.tooltipBg,
+              color: ratioMenuPalette.tooltipText,
+              borderColor: ratioMenuPalette.barBorder,
+            }}
+          >
+            重置
+          </span>
+        </button>
+       </div>
+
+       {ratioPanel && (
+        <div
+          ref={ratioPanelRef}
+          className="absolute right-20 top-24 z-[81] rounded-lg border shadow-lg p-2 pointer-events-auto flex items-center gap-1 whitespace-nowrap"
+          style={{
+            backgroundColor: ratioMenuPalette.panelBg,
+            color: ratioMenuPalette.panelText,
+            borderColor: ratioMenuPalette.panelBorder,
+          }}
+        >
+          {ratioPanelOptions.map(option => {
+            const isActive = activeAspectRatioId === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                data-testid={`ratio-${option.id}`}
+                onClick={() => handleSelectRatio(option)}
+                className="px-2.5 py-1.5 rounded text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: isActive ? ratioMenuPalette.activeBg : 'transparent',
+                  color: isActive ? ratioMenuPalette.activeText : ratioMenuPalette.panelText,
+                }}
+                onMouseEnter={(e) => {
+                  if (isActive) return;
+                  e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+                }}
+                onMouseLeave={(e) => {
+                  if (isActive) return;
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+       )}
+
        <TransformWrapper
           centerOnInit={false} 
           minScale={0.2}
@@ -257,8 +529,12 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                   <div className="w-full flex justify-center">
                       {/* 可调宽海报主体 */}
                       <div 
+                        data-testid="poster-shell"
                         className="relative transition-shadow duration-300 shadow-2xl shrink-0 origin-top"
-                        style={{ width: `${posterWidth}px` }}
+                        style={{
+                          width: `${posterWidth}px`,
+                          height: typeof posterHeight === 'number' ? `${posterHeight}px` : undefined,
+                        }}
                       >
                         {/* 宽度拖拽手柄 */}
                         {/* 左侧手柄 */}
@@ -306,9 +582,11 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                 relative flex flex-col cursor-auto
                                 ${paddingClass}
                                 ${themeStyle.frame}
+                                ${activeAspectRatio ? 'h-full overflow-hidden' : ''}
                             `}
                             style={{
                                 width: '100%',
+                                height: activeAspectRatio ? '100%' : undefined,
                                 ...themeStyle.frameStyle,
                                 ...cssVariables
                             }}
@@ -317,6 +595,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                             <div className={`
                                 relative flex flex-col z-10
                                 ${themeStyle.card}
+                                ${activeAspectRatio ? 'flex-1 min-h-0' : ''}
                             `}
                             style={{ ...themeStyle.cardStyle }}
                             >
@@ -337,6 +616,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                     px-8 py-10 sm:px-12 sm:py-12
                                     ${themeStyle.content}
                                     ${layoutClass}
+                                    ${activeAspectRatio ? 'min-h-0 overflow-y-auto' : ''}
                                 `}>
                                     <div className={`prose max-w-none ${themeStyle.prose} ${fontSizeClass} ${spacingClass}`}>
                                         <ReactMarkdown 
