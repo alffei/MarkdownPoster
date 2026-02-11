@@ -19,12 +19,21 @@ import { DECOR_PRESETS } from '../config/decorPresets';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
 
 const DEFAULT_POSTER_WIDTH = 640;
+const STORAGE_KEY_POSTER_IMAGE_DISPLAYS = 'markdown_poster_image_displays_v1';
+const MAX_PERSISTED_IMAGE_STYLES = 500;
 
 type AspectRatioOption = {
   id: string;
   label: string;
   w: number;
   h: number;
+};
+
+type ImageAlign = 'left' | 'center' | 'right';
+
+type PosterImageDisplay = {
+  widthPercent: number;
+  align: ImageAlign;
 };
 
 const VERTICAL_RATIO_OPTIONS: AspectRatioOption[] = [
@@ -45,6 +54,50 @@ const ALL_RATIO_OPTIONS: AspectRatioOption[] = [
   ...VERTICAL_RATIO_OPTIONS,
   ...HORIZONTAL_RATIO_OPTIONS,
 ];
+
+const DEFAULT_IMAGE_DISPLAY: PosterImageDisplay = {
+  widthPercent: 100,
+  align: 'center',
+};
+
+const clampImageWidthPercent = (value: number) => Math.max(40, Math.min(100, Math.round(value)));
+
+const normalizeImageAlign = (value: unknown): ImageAlign => {
+  if (value === 'left' || value === 'right') return value;
+  return 'center';
+};
+
+const normalizeImageDisplay = (value: unknown): PosterImageDisplay | null => {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Partial<PosterImageDisplay>;
+  if (typeof raw.widthPercent !== 'number' || !Number.isFinite(raw.widthPercent)) return null;
+  return {
+    widthPercent: clampImageWidthPercent(raw.widthPercent),
+    align: normalizeImageAlign(raw.align),
+  };
+};
+
+const loadPersistedImageDisplays = (): Record<string, PosterImageDisplay> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_POSTER_IMAGE_DISPLAYS);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+
+    const entries = Object.entries(parsed as Record<string, unknown>).slice(0, MAX_PERSISTED_IMAGE_STYLES);
+    const next: Record<string, PosterImageDisplay> = {};
+    for (const [key, value] of entries) {
+      if (!key) continue;
+      const normalized = normalizeImageDisplay(value);
+      if (!normalized) continue;
+      next[key] = normalized;
+    }
+    return next;
+  } catch {
+    return {};
+  }
+};
 
 interface PosterPreviewProps {
   markdown: string;
@@ -143,6 +196,9 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
   const [ratioPanel, setRatioPanel] = useState<'landscape' | 'portrait' | null>(null);
   const ratioToolbarRef = useRef<HTMLDivElement>(null);
   const ratioPanelRef = useRef<HTMLDivElement>(null);
+  const imageToolRef = useRef<HTMLDivElement>(null);
+  const [selectedImageKey, setSelectedImageKey] = useState<string | null>(null);
+  const [posterImageDisplays, setPosterImageDisplays] = useState<Record<string, PosterImageDisplay>>(() => loadPersistedImageDisplays());
 
   const activeAspectRatio = useMemo(
     () => ALL_RATIO_OPTIONS.find(option => option.id === activeAspectRatioId) || null,
@@ -249,6 +305,30 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
     };
   }, [ratioPanel]);
 
+  // 文档级捕获：统一处理“图片选中 + 点外关闭”，避免 pointer/mouse 事件竞态。
+  useEffect(() => {
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      if (imageToolRef.current?.contains(target)) return;
+      const imageHolder = target.closest('[data-mp-image-key]') as HTMLElement | null;
+      if (imageHolder) {
+        const key = imageHolder.getAttribute('data-mp-image-key');
+        if (!key) return;
+        setSelectedImageKey(prev => (prev === key ? prev : key));
+        return;
+      }
+      if (selectedImageKey) {
+        setSelectedImageKey(null);
+      }
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+    };
+  }, [selectedImageKey]);
+
   // 将主题色映射到 CSS 变量，供卡片与文本在不同主题下复用。
   const cssVariables = useMemo(() => {
       const colors = themeStyle.colors;
@@ -313,6 +393,51 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
           tooltipText: '#ffffff',
         };
   }, [themeStyle.colors, themeStyle.isDark, isDarkMode]);
+
+  const selectedImageDisplay = useMemo(() => {
+    if (!selectedImageKey) return null;
+    return posterImageDisplays[selectedImageKey] || DEFAULT_IMAGE_DISPLAY;
+  }, [posterImageDisplays, selectedImageKey]);
+
+  useEffect(() => {
+    try {
+      const entries = Object.entries(posterImageDisplays).slice(0, MAX_PERSISTED_IMAGE_STYLES);
+      if (entries.length === 0) {
+        localStorage.removeItem(STORAGE_KEY_POSTER_IMAGE_DISPLAYS);
+        return;
+      }
+      const compact = Object.fromEntries(entries);
+      localStorage.setItem(STORAGE_KEY_POSTER_IMAGE_DISPLAYS, JSON.stringify(compact));
+    } catch (error) {
+      console.warn('Failed to persist image display settings', error);
+    }
+  }, [posterImageDisplays]);
+
+  const updateSelectedImageDisplay = useCallback((patch: Partial<PosterImageDisplay>) => {
+    if (!selectedImageKey) return;
+    setPosterImageDisplays(prev => {
+      const current = prev[selectedImageKey] || DEFAULT_IMAGE_DISPLAY;
+      const next: PosterImageDisplay = {
+        widthPercent: clampImageWidthPercent(
+          typeof patch.widthPercent === 'number' ? patch.widthPercent : current.widthPercent
+        ),
+        align: normalizeImageAlign(patch.align ?? current.align),
+      };
+      return {
+        ...prev,
+        [selectedImageKey]: next,
+      };
+    });
+  }, [selectedImageKey]);
+
+  const handleResetSelectedImageDisplay = useCallback(() => {
+    if (!selectedImageKey) return;
+    setPosterImageDisplays(prev => {
+      const next = { ...prev };
+      delete next[selectedImageKey];
+      return next;
+    });
+  }, [selectedImageKey]);
 
   return (
     <div 
@@ -478,6 +603,102 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
         </div>
        )}
 
+       {selectedImageKey && selectedImageDisplay && (
+        <div
+          ref={imageToolRef}
+          className="absolute right-6 top-[17.5rem] z-[82] w-64 rounded-lg border shadow-lg p-3 pointer-events-auto space-y-3"
+          style={{
+            backgroundColor: ratioMenuPalette.panelBg,
+            color: ratioMenuPalette.panelText,
+            borderColor: ratioMenuPalette.panelBorder,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold tracking-wide">图片样式</div>
+            <button
+              type="button"
+              onClick={() => setSelectedImageKey(null)}
+              className="text-xs px-2 py-0.5 rounded transition-colors"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              关闭
+            </button>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span>宽度</span>
+              <span>{selectedImageDisplay.widthPercent}%</span>
+            </div>
+            <input
+              type="range"
+              min={40}
+              max={100}
+              step={1}
+              value={selectedImageDisplay.widthPercent}
+              onChange={(e) => {
+                updateSelectedImageDisplay({ widthPercent: Number(e.target.value) });
+              }}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs">对齐</div>
+            <div className="flex items-center gap-1">
+              {([
+                { id: 'left', label: '左' },
+                { id: 'center', label: '中' },
+                { id: 'right', label: '右' },
+              ] as { id: ImageAlign; label: string }[]).map(item => {
+                const active = selectedImageDisplay.align === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => updateSelectedImageDisplay({ align: item.id })}
+                    className="flex-1 px-2 py-1 text-xs rounded transition-colors"
+                    style={{
+                      backgroundColor: active ? ratioMenuPalette.activeBg : 'transparent',
+                      color: active ? ratioMenuPalette.activeText : ratioMenuPalette.panelText,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (active) return;
+                      e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (active) return;
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="w-full px-2 py-1.5 rounded text-sm font-semibold transition-colors"
+            onClick={handleResetSelectedImageDisplay}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = ratioMenuPalette.hoverBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            重置当前图片
+          </button>
+        </div>
+       )}
+
        <TransformWrapper
           centerOnInit={false} 
           minScale={0.2}
@@ -618,13 +839,35 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                     ${layoutClass}
                                     ${activeAspectRatio ? 'min-h-0 overflow-y-auto' : ''}
                                 `}>
+                                    <div className="min-h-full flex flex-col justify-center">
                                     <div className={`prose max-w-none ${themeStyle.prose} ${fontSizeClass} ${spacingClass}`}>
                                         <ReactMarkdown 
                                             remarkPlugins={[remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter]}
                                             rehypePlugins={[rehypeKatex]}
                                             urlTransform={(value) => value}
                                             components={{
-                                                img: (props) => <StableImage {...props} imagePool={imagePool} />,
+                                                img: ({ node, ...props }) => {
+                                                  const rawSrc = typeof props.src === 'string' ? props.src : '';
+                                                  const offset = typeof (node as any)?.position?.start?.offset === 'number'
+                                                    ? (node as any).position.start.offset
+                                                    : -1;
+                                                  const imageKey = `${offset}:${rawSrc}`;
+                                                  const isSelectedImage = selectedImageKey === imageKey;
+                                                  return (
+                                                    <span
+                                                      data-mp-image-key={imageKey}
+                                                      className="block cursor-pointer"
+                                                    >
+                                                      <StableImage
+                                                        {...props}
+                                                        imagePool={imagePool}
+                                                        imageKey={imageKey}
+                                                        imageDisplay={posterImageDisplays[imageKey]}
+                                                        isSelected={isSelectedImage}
+                                                      />
+                                                    </span>
+                                                  );
+                                                },
                                                 a: ({ node, href, children, ...props }) => {
                                                 if (href && href.startsWith('ruby:')) {
                                                     const reading = href.replace('ruby:', '');
@@ -650,6 +893,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                         >
                                             {normalizedMarkdown}
                                         </ReactMarkdown>
+                                    </div>
                                     </div>
                                 </div>
                             </div>
