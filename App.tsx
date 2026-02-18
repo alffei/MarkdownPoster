@@ -231,6 +231,10 @@ export default function App() {
       return {};
     }
   });
+  const imagePoolRef = useRef(imagePool);
+  useEffect(() => {
+    imagePoolRef.current = imagePool;
+  }, [imagePool]);
 
   // 11) 自定义主色（用于可改色主题）
   const [customThemeColor, setCustomThemeColor] = useState<string>(() => {
@@ -701,7 +705,7 @@ export default function App() {
     const textarea = textareaRef.current;
     if (!textarea) {
       setTemplateContext({
-        sourceText: markdown,
+        sourceText: template === 'illustration' ? '' : markdown,
         hasSelection: false,
         selectionStart: 0,
         selectionEnd: 0
@@ -709,8 +713,10 @@ export default function App() {
     } else {
       const { selectionStart, selectionEnd, value } = textarea;
       const hasSelection = selectionStart !== selectionEnd;
-      // 智能处理支持“选中优先”，未选中时回退到全文。
-      const sourceText = hasSelection ? value.substring(selectionStart, selectionEnd) : value;
+      // 智能处理支持“选中优先”；插图模式无选区时默认留空，按光标插入。
+      const sourceText = template === 'illustration'
+        ? (hasSelection ? value.substring(selectionStart, selectionEnd) : '')
+        : (hasSelection ? value.substring(selectionStart, selectionEnd) : value);
       setTemplateContext({
         sourceText,
         hasSelection,
@@ -730,8 +736,52 @@ export default function App() {
     setIsTemplatePopoverOpen(true);
   };
 
+  const sanitizeImageAlt = (raw: string) => {
+    return raw
+      .replace(/\r?\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/[\[\]]/g, '')
+      .trim();
+  };
+
+  const persistGeneratedImage = (dataUrl: string) => {
+    if (!dataUrl.startsWith('data:image/')) {
+      setRepairNotice({ message: '生成结果不是有效图片', id: Date.now() });
+      return null;
+    }
+    const imgId = `img_${Math.random().toString(36).slice(2, 11)}`;
+    const newPool = { ...imagePoolRef.current, [imgId]: dataUrl };
+    try {
+      const serialized = JSON.stringify(newPool);
+      if (serialized.length > 4.8 * 1024 * 1024) {
+        setRepairNotice({ message: '本地存储空间不足，无法保存插图', id: Date.now() });
+        return null;
+      }
+    } catch {
+      setRepairNotice({ message: '本地存储空间不足，无法保存插图', id: Date.now() });
+      return null;
+    }
+
+    setImagePool(newPool);
+    return imgId;
+  };
+
   const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => {
-    if (!result.trim()) return;
+    const isIllustration = options?.sourceTemplate === 'illustration';
+    let normalizedMode = mode;
+    let normalizedResult = result;
+
+    if (isIllustration) {
+      const generatedDataUrl = options?.illustrationDataUrl || '';
+      const storedImageId = persistGeneratedImage(generatedDataUrl);
+      if (!storedImageId) return;
+      const altText = sanitizeImageAlt(options?.illustrationAlt || 'AI插图');
+      normalizedResult = `![${altText}](local://${storedImageId})`;
+      normalizedMode = 'insert';
+      setRepairNotice({ message: '已插入 AI 插图', id: Date.now() });
+    }
+
+    if (!normalizedResult.trim()) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -741,33 +791,33 @@ export default function App() {
     let newSelectionStart = selectionStart;
     let newSelectionEnd = selectionStart;
 
-    if (mode === 'replace') {
+    if (normalizedMode === 'replace') {
       // 替换：有选区则替换选区；无选区则整文替换。
       if (hasSelection) {
-        newText = currentValue.slice(0, selectionStart) + result + currentValue.slice(selectionEnd);
+        newText = currentValue.slice(0, selectionStart) + normalizedResult + currentValue.slice(selectionEnd);
         newSelectionStart = selectionStart;
-        newSelectionEnd = selectionStart + result.length;
+        newSelectionEnd = selectionStart + normalizedResult.length;
       } else {
-        newText = result;
+        newText = normalizedResult;
         newSelectionStart = 0;
-        newSelectionEnd = result.length;
+        newSelectionEnd = normalizedResult.length;
       }
     }
 
-    if (mode === 'insert') {
+    if (normalizedMode === 'insert') {
       // 插入：插到选区末尾（或光标位置），保留上下文。
       const insertPos = hasSelection ? selectionEnd : selectionStart;
-      newText = currentValue.slice(0, insertPos) + result + currentValue.slice(insertPos);
+      newText = currentValue.slice(0, insertPos) + normalizedResult + currentValue.slice(insertPos);
       newSelectionStart = insertPos;
-      newSelectionEnd = insertPos + result.length;
+      newSelectionEnd = insertPos + normalizedResult.length;
     }
 
-    if (mode === 'append') {
+    if (normalizedMode === 'append') {
       // 追加：自动补齐空行，避免语义块粘连。
       const needsGap = currentValue.trim().length > 0;
       const spacer = needsGap ? (currentValue.endsWith('\n') ? '\n' : '\n\n') : '';
-      newText = currentValue + spacer + result;
-      newSelectionStart = newText.length - result.length;
+      newText = currentValue + spacer + normalizedResult;
+      newSelectionStart = newText.length - normalizedResult.length;
       newSelectionEnd = newText.length;
     }
 
@@ -780,7 +830,7 @@ export default function App() {
     });
 
     const poemSourceMatched = options?.sourceTemplate === 'poem' || smartPanelTemplate === 'poem';
-    const shouldApplyPoemPreset = poemSourceMatched && mode !== 'append';
+    const shouldApplyPoemPreset = poemSourceMatched && normalizedMode !== 'append';
     if (shouldApplyPoemPreset) {
       // 竖排诗在 insert/replace 后自动切到海报模式并套用预设视觉参数。
       const poemTemplate =
@@ -826,8 +876,10 @@ export default function App() {
   useEffect(() => {
     if (!isDraggingSmartPanel) return;
     const handleMouseMove = (event: MouseEvent) => {
-      const panelWidth = 560;
-      const panelHeight = 520;
+      const panelWidth = smartPanelTemplate === 'illustration' ? 820 : 560;
+      const panelHeight = smartPanelTemplate === 'illustration'
+        ? Math.min(760, Math.round(window.innerHeight * 0.82))
+        : 520;
       const minX = 8;
       const minY = 8;
       const maxX = Math.max(minX, window.innerWidth - panelWidth - 8);
@@ -849,7 +901,7 @@ export default function App() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingSmartPanel]);
+  }, [isDraggingSmartPanel, smartPanelTemplate]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1525,6 +1577,12 @@ export default function App() {
                 { key: 'poem', label: '竖排诗', icon: (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M12 6v12M17 8v8" />
+                  </svg>
+                )},
+                { key: 'illustration', label: '插图生成', icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14l3-3 3 3 2-2 3 3M8 9h.01" />
                   </svg>
                 )},
               ].map((item) => (

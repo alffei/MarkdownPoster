@@ -50,6 +50,19 @@ const getGeminiConfig = () => ({
   ),
 });
 
+const getGeminiImageConfig = () => ({
+  endpoint: requireProviderEnv(
+    "gemini",
+    ["VITE_GEMINI_API_BASE_URL", "VITE_GEMINI_BASE_URL"],
+    "endpoint"
+  ),
+  model: requireProviderEnv(
+    "gemini",
+    ["VITE_GEMINI_IMAGE_MODEL", "VITE_GEMINI_MODEL"],
+    "image model"
+  ),
+});
+
 const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, "");
 
 const buildGeminiGenerateContentUrl = (baseUrl: string, model: string) => {
@@ -73,6 +86,40 @@ const readResponseText = async (response: Response) => {
   } catch {
     return text;
   }
+};
+
+const toShortText = (value: string, max = 220) => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return normalized.length <= max ? normalized : `${normalized.slice(0, max)}...`;
+};
+
+const pickGeminiErrorSummary = (data: unknown) => {
+  if (!data) return "";
+  if (typeof data === "string") return toShortText(data);
+  if (typeof data !== "object") return "";
+
+  const record = data as Record<string, unknown>;
+  const errorNode = record.error;
+  if (errorNode && typeof errorNode === "object") {
+    const err = errorNode as Record<string, unknown>;
+    const code = String(err.code ?? "").trim();
+    const status = String(err.status ?? "").trim();
+    const message = toShortText(String(err.message ?? ""));
+    const parts = [code, status, message].filter(Boolean);
+    if (parts.length) return parts.join(" ");
+  }
+
+  const promptFeedback = record.promptFeedback;
+  if (promptFeedback && typeof promptFeedback === "object") {
+    const feedback = promptFeedback as Record<string, unknown>;
+    const reason = String(feedback.blockReason ?? "").trim();
+    const detail = toShortText(String(feedback.blockReasonMessage ?? ""));
+    const parts = [reason, detail].filter(Boolean);
+    if (parts.length) return parts.join(" ");
+  }
+
+  return toShortText(JSON.stringify(record));
 };
 
 const pickTextFromModelResponse = (data: unknown): string => {
@@ -126,6 +173,36 @@ const parseJsonText = (raw: string) => {
   } catch {
     return null;
   }
+};
+
+const pickImageDataFromModelResponse = (
+  data: unknown
+): { mimeType: string; base64Data: string } | null => {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  const candidates = obj.candidates;
+  if (!Array.isArray(candidates)) return null;
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const content = (candidate as Record<string, unknown>).content;
+    if (!content || typeof content !== "object") continue;
+    const parts = (content as Record<string, unknown>).parts;
+    if (!Array.isArray(parts)) continue;
+
+    for (const part of parts) {
+      if (!part || typeof part !== "object") continue;
+      const inlineData = (part as Record<string, unknown>).inlineData;
+      if (!inlineData || typeof inlineData !== "object") continue;
+      const inlineRecord = inlineData as Record<string, unknown>;
+      const base64Data = String(inlineRecord.data || "").trim();
+      if (!base64Data) continue;
+      const mimeType = String(inlineRecord.mimeType || "image/png").trim() || "image/png";
+      return { mimeType, base64Data };
+    }
+  }
+
+  return null;
 };
 
 const callGlm = async (
@@ -187,6 +264,46 @@ const callGemini = async (
   const text = pickTextFromModelResponse(data);
   if (text) return text;
   throw new Error(`Gemini response has no text @ ${url}`);
+};
+
+const callGeminiImage = async (
+  promptText: string
+): Promise<{ mimeType: string; dataUrl: string }> => {
+  const { endpoint, model } = getGeminiImageConfig();
+  const url = buildGeminiGenerateContentUrl(endpoint, model);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: promptText }] }],
+      generationConfig: {
+        responseModalities: ["IMAGE", "TEXT"],
+      },
+    }),
+  });
+
+  const data = await readResponseText(response);
+  if (!response.ok) {
+    const summary = pickGeminiErrorSummary(data);
+    throw new Error(
+      `Gemini Image API Error(${response.status}) @ ${url}${summary ? `: ${summary}` : ""}`
+    );
+  }
+
+  const imagePayload = pickImageDataFromModelResponse(data);
+  if (!imagePayload) {
+    const summary = pickGeminiErrorSummary(data);
+    throw new Error(
+      `Gemini image response has no inline image @ ${url}${summary ? `: ${summary}` : ""}`
+    );
+  }
+
+  return {
+    mimeType: imagePayload.mimeType,
+    dataUrl: `data:${imagePayload.mimeType};base64,${imagePayload.base64Data}`,
+  };
 };
 
 const callModel = async (
@@ -263,4 +380,34 @@ export const inferPoemMetaWithAi = async (
   const author = typeof parsed?.author === "string" ? parsed.author.trim() : "";
 
   return { title, author };
+};
+
+export const generateIllustrationWithAi = async (
+  stylePrompt: string,
+  contentDescription: string,
+  ratio: string
+): Promise<{ dataUrl: string; mimeType: string }> => {
+  const style = stylePrompt.trim();
+  const content = contentDescription.trim();
+  const frameRatio = ratio.trim();
+  if (!style) {
+    throw new Error("Style prompt is required");
+  }
+  if (!content) {
+    throw new Error("Content description is required");
+  }
+  if (!frameRatio) {
+    throw new Error("Illustration ratio is required");
+  }
+
+  const composedPrompt = [
+    style,
+    "",
+    "请严格按上述风格生成一张插图。",
+    `画面比例要求：${frameRatio}。请严格按该比例构图与输出。`,
+    "核心内容：",
+    content,
+  ].join("\n");
+
+  return callGeminiImage(composedPrompt);
 };
