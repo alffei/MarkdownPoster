@@ -1,10 +1,13 @@
 /**
- * 模块说明：公众号外观弹层组件，配置微信排版风格。
+ * 模块说明：公众号外观弹层组件，采用"模板 + 微调"结构。
+ * 布局参考海报配置画面样式。
  */
 
-import React from 'react';
-import { WeChatConfig } from '../types';
+import React, { useRef } from 'react';
+import { WeChatConfig, WeChatTemplateKind } from '../types';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
+
+type BooleanConfigKey = 'macCodeBlock' | 'lineNumbers' | 'linkReferences' | 'indent' | 'justify';
 
 interface WeChatAppearancePopoverProps {
   config: WeChatConfig;
@@ -13,225 +16,393 @@ interface WeChatAppearancePopoverProps {
   onClose: () => void;
 }
 
+const templateOptions: { label: string; value: WeChatTemplateKind; summary: string }[] = [
+  { label: '基础', value: 'basic', summary: '通用排版，标题结构可调。' },
+  { label: '果比', value: 'guobi', summary: '固定果比风格，保留专属卡片结构。' }
+];
+
+const detailToggleItems: { label: string; key: BooleanConfigKey }[] = [
+  { label: 'Mac 代码块', key: 'macCodeBlock' },
+  { label: '代码块行号', key: 'lineNumbers' },
+  { label: '微信外链转底部引用', key: 'linkReferences' }
+];
+
+const WeChatTemplateThumbnail: React.FC<{
+  template: WeChatTemplateKind;
+  label: string;
+  isActive: boolean;
+  isDarkMode: boolean;
+}> = ({ template, label, isActive, isDarkMode }) => {
+  const frameClass = template === 'guobi'
+    ? 'bg-[#f0ece6]'
+    : (isDarkMode ? 'bg-[#272c34]' : 'bg-gray-100');
+  const cardClass = template === 'guobi'
+    ? 'bg-[#f7f4ef] border border-[#dfd6ca]'
+    : (isDarkMode ? 'bg-[#1f242c] border border-[#3e4451]' : 'bg-white border border-gray-200');
+  const titleClass = template === 'guobi'
+    ? 'text-[#4e463d]'
+    : (isDarkMode ? 'text-gray-200' : 'text-gray-800');
+  const accentColor = template === 'guobi' ? '#D97757' : '#07c160';
+
+  return (
+    <div
+      className={`w-full aspect-[4/3] rounded-xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-200 border-2 ${isActive
+        ? (isDarkMode ? 'border-[#98c379] ring-2 ring-[#98c379]/25' : 'border-blue-500 ring-2 ring-blue-500/20')
+        : (isDarkMode ? 'border-[#3e4451] group-hover:border-[#5c6370]' : 'border-gray-200 group-hover:border-blue-300')
+        } ${frameClass}`}
+    >
+      <div className={`w-[80%] h-[75%] rounded-lg overflow-hidden flex flex-col ${cardClass}`}>
+        <div className={`h-4 px-1.5 flex items-center ${template === 'guobi' ? 'border-b border-[#dfd6ca]' : (isDarkMode ? 'border-b border-[#3e4451]' : 'border-b border-gray-100')}`}>
+          {template === 'basic' ? (
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+            </div>
+          ) : (
+            <div className="w-full text-center text-[7px] tracking-[0.15em] text-[#7a6b5f]">GUOBI</div>
+          )}
+        </div>
+
+        <div className="flex-1 p-1.5 flex flex-col items-center justify-center gap-1">
+          <div className={`text-[10px] font-bold tracking-tight ${titleClass}`}>{label}</div>
+          <div className="w-full rounded-sm h-3.5 flex items-center px-1" style={{ backgroundColor: `${accentColor}1A` }}>
+            <div className="h-1.5 w-full rounded-sm" style={{ backgroundColor: accentColor }} />
+          </div>
+          <div className={`w-full h-0.5 rounded-sm ${isDarkMode && template === 'basic' ? 'bg-[#3e4451]' : 'bg-black/10'}`} />
+          <div className={`w-3/4 h-0.5 rounded-sm ${isDarkMode && template === 'basic' ? 'bg-[#3e4451]' : 'bg-black/10'}`} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = ({
   config,
   setConfig,
   isDarkMode,
   onClose
 }) => {
-  
-  const updateConfig = (key: keyof WeChatConfig, value: any) => {
-    setConfig({ ...config, [key]: value });
-  };
-
-  const layouts = WeChatThemeRegistry.getLayouts();
+  const isGuobiTemplate = config.template === 'guobi';
+  const typographyLayouts = WeChatThemeRegistry
+    .getLayouts()
+    .filter((lt) => ['Base', 'Classic', 'Vibrant'].includes(lt.id));
   const colors = WeChatThemeRegistry.getColorPresets();
   const fontSizes = WeChatThemeRegistry.getFontSizes();
   const lineHeights = WeChatThemeRegistry.getLineHeights();
   const codeThemes = WeChatThemeRegistry.getCodeThemes();
   const captionTypes = WeChatThemeRegistry.getCaptionTypes();
 
-  return (
-    <div className={`absolute top-full right-0 mt-2 w-[340px] rounded-xl shadow-2xl border p-5 z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none
-      ${isDarkMode 
-        ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50' 
-        : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/50'
-      }`}
-    >
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-bold opacity-90">公众号排版配置</h3>
-        <button onClick={onClose} className="opacity-50 hover:opacity-100">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-      </div>
+  const updateConfig = <K extends keyof WeChatConfig>(key: K, value: WeChatConfig[K]) => {
+    setConfig({ ...config, [key]: value });
+  };
 
-      {/* 1) 排版风格分组（分段按钮） */}
-      <div className="mb-6">
-        <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">排版风格</label>
-        <div className={`flex p-1 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
-          {layouts.map((lt) => (
-            <button
-              key={lt.id}
-              onClick={() => updateConfig('layout', lt.id)}
-              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
-                config.layout === lt.id
-                  ? (isDarkMode ? 'bg-[#3e4451] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
-                  : 'opacity-60 hover:opacity-100'
-              }`}
-            >
-              {lt.name}
-            </button>
-          ))}
-        </div>
-      </div>
+  // Per-template config snapshots (各模板独立缓存)
+  const templateSnapshots = useRef<Partial<Record<WeChatTemplateKind, WeChatConfig>>>({});
 
-      {/* 2) 主题色选择 */}
-      <div className="mb-6">
-          <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">主题色</label>
-          <div className="flex flex-wrap gap-2.5">
-             {colors.map((preset) => (
-                 <button
-                    key={preset.color}
-                    onClick={() => updateConfig('primaryColor', preset.color)}
-                    title={preset.label}
-                    className={`w-6 h-6 rounded-full shadow-sm transition-transform hover:scale-110 relative ${
-                        config.primaryColor.toLowerCase() === preset.color.toLowerCase() 
-                        ? 'ring-2 ring-offset-2 ring-blue-400 scale-110' 
-                        : 'border border-gray-100'
-                    } ${isDarkMode ? 'ring-offset-[#21252b] border-[#3e4451]' : 'ring-offset-white'}`}
-                    style={{ backgroundColor: preset.color }}
-                 />
-             ))}
-             {/* 自定义颜色输入 */}
-             <div className="relative w-6 h-6 rounded-full overflow-hidden shadow-sm border cursor-pointer hover:scale-110 transition-transform flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-400">
-                 <input 
-                    type="color" 
-                    value={config.primaryColor}
-                    onChange={(e) => updateConfig('primaryColor', e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    title="自定义颜色"
-                 />
-             </div>
-          </div>
-      </div>
+  const GUOBI_DEFAULTS: Partial<WeChatConfig> = {
+    primaryColor: '#D97757',
+    fontSize: 'Small',
+    lineHeight: 'compact',
+    indent: false,
+    justify: false,
+    macCodeBlock: false,
+    lineNumbers: false,
+    linkReferences: false,
+  };
 
-      {/* 3) 排版参数（字号 + 行高） */}
-      <div className="mb-5 space-y-3">
-        {/* 字号 */}
-        <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">正文字号</label>
-            <div className={`flex w-[180px] p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
-              {fontSizes.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => updateConfig('fontSize', opt.value)}
-                  className={`flex-1 py-1 text-[10px] font-medium rounded transition-all ${
-                    config.fontSize === opt.value
-                      ? (isDarkMode ? 'bg-[#3e4451] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-        </div>
+  const applyTemplate = (template: WeChatTemplateKind) => {
+    // 保存当前模板的配置快照
+    templateSnapshots.current[config.template] = { ...config };
 
-        {/* 行高 */}
-        <div className="flex items-center justify-between">
-            <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">行间距</label>
-            <div className={`flex w-[180px] p-0.5 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
-              {lineHeights.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => updateConfig('lineHeight', opt.value)}
-                  className={`flex-1 py-1 text-[10px] font-medium rounded transition-all ${
-                    config.lineHeight === opt.value
-                      ? (isDarkMode ? 'bg-[#3e4451] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-        </div>
-      </div>
+    const saved = templateSnapshots.current[template];
+    if (saved) {
+      // 有快照则恢复
+      setConfig({ ...saved, template });
+    } else {
+      // 无快照则应用模板默认值
+      const base: WeChatConfig = { ...config, template };
+      if (template === 'guobi') {
+        const color = config.primaryColor.toLowerCase() === '#07c160'
+          ? GUOBI_DEFAULTS.primaryColor!
+          : config.primaryColor;
+        setConfig({ ...base, ...GUOBI_DEFAULTS, primaryColor: color });
+      } else {
+        // 切回基础时恢复基础默认值
+        setConfig({
+          ...base,
+          primaryColor: config.primaryColor.toLowerCase() === '#d97757'
+            ? '#07c160'
+            : config.primaryColor,
+          fontSize: 'Medium',
+          lineHeight: 'comfortable',
+          indent: false,
+          justify: true,
+          macCodeBlock: true,
+          lineNumbers: true,
+          linkReferences: true,
+        });
+      }
+    }
+  };
 
-      {/* 4) 代码块主题 */}
-      <div className="mb-5">
-        <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">代码块主题</label>
-        <div className="relative">
-          <select 
-             value={config.codeTheme}
-             onChange={(e) => updateConfig('codeTheme', e.target.value)}
-             className={`w-full text-xs p-2 rounded-lg border appearance-none focus:outline-none focus:ring-1 ${
-                isDarkMode 
-                ? 'bg-[#2c313a] border-[#181a1f] text-gray-200 focus:ring-blue-500' 
-                : 'bg-gray-50 border-gray-200 text-gray-800 focus:ring-blue-400'
-             }`}
-          >
-             {codeThemes.map(theme => (
-               <option key={theme.value} value={theme.value}>{theme.label}</option>
-             ))}
-          </select>
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
-             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </div>
-        </div>
-      </div>
+  const toggleConfig = (key: BooleanConfigKey) => {
+    updateConfig(key, !Boolean(config[key]) as WeChatConfig[BooleanConfigKey]);
+  };
 
-      {/* 5) 图注来源规则 */}
-      <div className="mb-5">
-        <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2 block">图注格式</label>
-        <div className={`flex p-1 rounded-lg border ${isDarkMode ? 'bg-[#2c313a] border-[#181a1f]' : 'bg-gray-100 border-gray-200'}`}>
-          {captionTypes.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => updateConfig('captionType', opt.value)}
-              className={`flex-1 py-1.5 text-[10px] font-medium rounded-md transition-all ${
-                config.captionType === opt.value
-                  ? (isDarkMode ? 'bg-[#3e4451] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
-                  : 'opacity-60 hover:opacity-100'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+  // Shared style tokens
+  const rowClass = 'flex items-center justify-between py-2';
+  const rowLabelClass = 'text-xs font-medium opacity-75 shrink-0';
+  const segmentLabelClass = `text-xs font-medium mb-3 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`;
+  const dividerClass = `border-t my-3 ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`;
 
-      {/* 6) 开关项 */}
-      <div className="space-y-3">
-        {[
-           { label: 'Mac 代码块', key: 'macCodeBlock' },
-           { label: '代码块行号', key: 'lineNumbers' },
-           { label: '微信外链转底部引用', key: 'linkReferences' },
-           { label: '段落首行缩进', key: 'indent' },
-           { label: '段落两端对齐', key: 'justify' },
-        ].map((item) => (
-           <div key={item.key} className="flex items-center justify-between">
-              <label className="text-xs font-medium opacity-80">{item.label}</label>
-              <button 
-                onClick={() => updateConfig(item.key as keyof WeChatConfig, !config[item.key as keyof WeChatConfig])}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 focus:outline-none ${
-                    config[item.key as keyof WeChatConfig]
-                    ? (isDarkMode ? 'bg-[#98c379]' : 'bg-green-500') 
-                    : (isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300')
-                }`}
-              >
-                <div 
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${
-                      config[item.key as keyof WeChatConfig] ? 'translate-x-6' : 'translate-x-0'
-                  }`} 
-                />
-              </button>
-           </div>
-        ))}
-      </div>
-      
-      {/* 重置按钮 */}
-      <div className="mt-6 pt-4 border-t border-dashed border-gray-300/30">
+  const SegGroup = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <div className={segmentLabelClass}>{label}</div>
+      {children}
+    </div>
+  );
+
+  const SegRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div className={rowClass}>
+      <span className={rowLabelClass}>{label}</span>
+      {children}
+    </div>
+  );
+
+  const SegmentedControl = ({
+    options,
+    value,
+    onChange,
+    className = ''
+  }: {
+    options: { label: string; value: string }[];
+    value: string;
+    onChange: (v: string) => void;
+    className?: string;
+  }) => (
+    <div className={`flex rounded-lg border p-0.5 ${isDarkMode ? 'bg-[#21252b] border-[#181a1f]' : 'bg-gray-100 border-gray-200'} ${className}`}>
+      {options.map((opt) => (
         <button
-           onClick={() => setConfig({
-              layout: 'Base',
-              primaryColor: '#07c160',
-              codeTheme: 'vsDark',
-              macCodeBlock: true,
-              lineNumbers: true,
-              linkReferences: true,
-              indent: false,
-              justify: true,
-              captionType: 'title',
-              fontSize: 'Medium',
-              lineHeight: 'comfortable'
-           })}
-           className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`flex-1 py-0.5 px-2 text-[11px] font-medium rounded-md transition-all whitespace-nowrap ${value === opt.value
+            ? (isDarkMode ? 'bg-[#3e4451] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
+            : 'opacity-55 hover:opacity-80'
+            }`}
         >
-          重置配置
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const Toggle = ({ label, keyName }: { label?: string; keyName: BooleanConfigKey }) => (
+    <div className={rowClass}>
+      {label && <span className={rowLabelClass}>{label}</span>}
+      <button
+        onClick={() => toggleConfig(keyName)}
+        className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors duration-300 focus:outline-none ml-auto ${config[keyName]
+          ? (isDarkMode ? 'bg-[#98c379]' : 'bg-green-500')
+          : (isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300')
+          }`}
+      >
+        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform duration-300 ease-in-out ${config[keyName] ? 'translate-x-4' : 'translate-x-0'}`} />
+      </button>
+    </div>
+  );
+
+
+  return (
+    <div
+      style={{ width: 'min(680px, calc(100vw - 16px))' }}
+      className={`absolute top-full right-0 mt-2 rounded-2xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none overflow-hidden
+      ${isDarkMode
+          ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50'
+          : 'bg-white border-gray-200 text-gray-800 shadow-gray-300/40'
+        }`}
+    >
+      {/* Header */}
+      <div className={`flex justify-between items-center px-5 py-3.5 border-b ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
+        <h3 className="text-sm font-bold opacity-90">公众号排版配置</h3>
+        <button onClick={onClose} className="opacity-40 hover:opacity-80 transition-opacity">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
       </div>
 
+      <div className="overflow-y-auto max-h-[82vh] custom-scrollbar">
+        <div className="p-5 space-y-5">
+
+          {/* ── 主题风格（模板）── */}
+          <section>
+            <div className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+              主题风格（模板）
+            </div>
+            <div className="flex gap-3">
+              {templateOptions.map((item) => {
+                const active = config.template === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    onClick={() => applyTemplate(item.value)}
+                    title={item.summary}
+                    className={`group relative w-32 shrink-0 text-left transition-all duration-200 ${active ? 'scale-[1.02]' : 'hover:scale-[1.02]'}`}
+                  >
+                    <WeChatTemplateThumbnail template={item.value} label={item.label} isActive={active} isDarkMode={isDarkMode} />
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* ── 微调 section header ── */}
+          <div className={`flex items-center justify-between border-t pt-4 ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
+            <span className={`text-sm font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>微调</span>
+            <svg className={`w-4 h-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </div>
+
+          {/* ── 微调 two-column ── */}
+          <div className="flex gap-0">
+
+            {/* Left: 文字 */}
+            <div className="flex-1 pr-5">
+              <SegGroup label="文字">
+                <SegRow label={isGuobiTemplate ? '字体风格' : '排版风格'}>
+                  <SegmentedControl
+                    options={typographyLayouts.map((lt) => ({ label: lt.name, value: lt.id }))}
+                    value={config.layout}
+                    onChange={(v) => updateConfig('layout', v)}
+                    className="ml-2"
+                  />
+                </SegRow>
+
+                <SegRow label="正文字号">
+                  <SegmentedControl
+                    options={fontSizes.map((f) => ({ label: f.label, value: f.value }))}
+                    value={config.fontSize}
+                    onChange={(v) => updateConfig('fontSize', v)}
+                    className="ml-2"
+                  />
+                </SegRow>
+
+                <SegRow label="行间距">
+                  <SegmentedControl
+                    options={lineHeights.map((lh) => ({ label: lh.label, value: lh.value }))}
+                    value={config.lineHeight}
+                    onChange={(v) => updateConfig('lineHeight', v as WeChatConfig['lineHeight'])}
+                    className="ml-2"
+                  />
+                </SegRow>
+
+                <Toggle label="首行缩进" keyName="indent" />
+                <Toggle label="两端对齐" keyName="justify" />
+              </SegGroup>
+            </div>
+
+            {/* Vertical divider */}
+            <div className={`w-px self-stretch ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-100'}`} />
+
+            {/* Right: 主题 + 代码与链接 */}
+            <div className="flex-1 pl-5 space-y-4">
+              <SegGroup label="主题色与图注">
+                {/* Color row */}
+                <SegRow label="主题色">
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    {colors.map((preset) => (
+                      <button
+                        key={preset.color}
+                        onClick={() => updateConfig('primaryColor', preset.color)}
+                        title={preset.label}
+                        className={`w-5 h-5 rounded-full shadow-sm transition-transform hover:scale-110 relative ${config.primaryColor.toLowerCase() === preset.color.toLowerCase()
+                          ? 'ring-2 ring-offset-2 ring-blue-400 scale-110'
+                          : 'border border-gray-100'
+                          } ${isDarkMode ? 'ring-offset-[#21252b] border-[#3e4451]' : 'ring-offset-white'}`}
+                        style={{ backgroundColor: preset.color }}
+                      />
+                    ))}
+                    <div className="relative w-5 h-5 rounded-full overflow-hidden shadow-sm border cursor-pointer hover:scale-110 transition-transform flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-400">
+                      <input
+                        type="color"
+                        value={config.primaryColor}
+                        onChange={(e) => updateConfig('primaryColor', e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        title="自定义颜色"
+                      />
+                    </div>
+                  </div>
+                </SegRow>
+
+                <SegRow label="代码块主题">
+                  <div className="relative ml-2 flex-1">
+                    <select
+                      value={config.codeTheme}
+                      onChange={(e) => updateConfig('codeTheme', e.target.value)}
+                      className={`w-full text-xs p-1.5 rounded-lg border appearance-none focus:outline-none focus:ring-1 ${isDarkMode
+                        ? 'bg-[#21252b] border-[#181a1f] text-gray-200 focus:ring-blue-500'
+                        : 'bg-white border-gray-200 text-gray-800 focus:ring-blue-400'
+                        }`}
+                    >
+                      {codeThemes.map((theme) => (
+                        <option key={theme.value} value={theme.value}>{theme.label}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </SegRow>
+
+                <SegRow label="图注格式">
+                  <SegmentedControl
+                    options={captionTypes.map((ct) => ({ label: ct.label, value: ct.value }))}
+                    value={config.captionType}
+                    onChange={(v) => updateConfig('captionType', v as WeChatConfig['captionType'])}
+                    className="ml-2"
+                  />
+                </SegRow>
+              </SegGroup>
+
+              <div className={dividerClass} />
+
+              <SegGroup label="代码与链接">
+                {detailToggleItems.map((item) => (
+                  <Toggle key={item.key} label={item.label} keyName={item.key} />
+                ))}
+              </SegGroup>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={() => setConfig({
+                template: 'basic',
+                layout: 'Base',
+                primaryColor: '#07c160',
+                codeTheme: 'vsDark',
+                macCodeBlock: true,
+                lineNumbers: true,
+                linkReferences: true,
+                indent: false,
+                justify: true,
+                captionType: 'title',
+                fontSize: 'Medium',
+                lineHeight: 'comfortable'
+              })}
+              className={`text-xs underline underline-offset-2 transition-opacity opacity-50 hover:opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                }`}
+            >
+              恢复默认配置
+            </button>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };

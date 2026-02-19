@@ -70,8 +70,13 @@ export enum WeChatTheme {
   Simple = 'Simple'
 }
 
+export type WeChatTemplateKind = 'basic' | 'guobi';
+
 export interface WeChatConfig {
-  layout: LayoutTheme;    // WeChat layouts id (e.g. Base/Classic/Vibrant)
+  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi (fixed structure)
+  // In basic template: controls layout structure.
+  // In guobi template: only controls text typography style (font family).
+  layout: LayoutTheme;    // Base/Classic/Vibrant
   primaryColor: string;   // Hex color for the theme
   codeTheme: string;      // e.g., 'dracula', 'github', 'vsDark', 'vsLight'
   macCodeBlock: boolean;

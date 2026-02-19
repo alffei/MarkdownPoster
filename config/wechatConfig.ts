@@ -12,6 +12,7 @@ export const WECHAT_THEME_CONFIG_YAML = `
 # ==============================================================================
 colorPresets:
   - { color: '#07c160', label: '微信绿' }
+  - { color: '#D97757', label: '果比橙' }
   - { color: '#997343', label: '雅致金' }
   - { color: '#3b82f6', label: '科技蓝' }
   - { color: '#6366f1', label: '睿智紫' }
@@ -224,5 +225,51 @@ layouts:
       hr:
         border: "0"
         borderTop: "1px solid {{primary_0.2}}"
+        margin: "2em 0"
+
+  # ----------------------------------------------------------------------------
+  # [Guobi] 果比（模板结构样式，排版风格按钮仅影响字体）
+  # ----------------------------------------------------------------------------
+  - id: "Guobi"
+    name: "果比"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.3em"
+        marginBottom: "0.8em"
+        lineHeight: "1.35"
+        color: "#3B3B38"
+      h2:
+        fontWeight: "bold"
+        marginTop: "18px"
+        marginBottom: "24px"
+        lineHeight: "22px"
+        color: "#000000"
+        textAlign: "center"
+        letterSpacing: "2px"
+        fontSize: "16px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "0"
+        marginBottom: "8px"
+        lineHeight: "2em"
+        fontSize: "16px"
+        color: "{{primary}}"
+      list:
+        color: "#646A73"
+      blockquote:
+        margin: "35px 0"
+        padding: "20px"
+        borderRadius: "25px"
+        border: "1px solid rgba(255, 255, 255, 1)"
+        backgroundColor: "rgba(250, 249, 245, 1)"
+        color: "#646A73"
+      link:
+        color: "{{primary}}"
+        fontWeight: "bold"
+        textDecoration: "none"
+      hr:
+        border: "0"
+        borderTop: "1px solid #ececec"
         margin: "2em 0"
 `;

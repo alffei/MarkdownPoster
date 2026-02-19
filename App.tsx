@@ -187,6 +187,7 @@ export default function App() {
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
+          template: 'basic',
           layout: 'Base',
           primaryColor: '#07c160',
           codeTheme: 'vsDark',
@@ -196,11 +197,13 @@ export default function App() {
           indent: false,
           justify: true,
           captionType: 'title',
+          fontSize: 'Medium',
           lineHeight: 'comfortable',
           ...parsed
       };
     }
     return {
+      template: 'basic',
       layout: 'Base',
       primaryColor: '#07c160',
       codeTheme: 'vsDark',

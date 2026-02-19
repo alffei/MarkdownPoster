@@ -13,7 +13,7 @@ import { WeChatConfig } from '../types';
 import { hexToRgba } from '../utils/themeUtils';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
 import { StableImage } from './StableImage';
-import { remarkRuby, remarkCenter } from '../utils/markdownPlugins';
+import { remarkRuby, remarkCenter, remarkGuobiCards } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
 
@@ -36,11 +36,13 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   containerRef,
   onScroll
 }, ref) => {
+  const isGuobiTemplate = config.template === 'guobi';
+  const resolvedLayoutId = isGuobiTemplate ? 'Guobi' : config.layout;
   
   // 1) 根据当前布局与主色，取出主题样式
   const themeStyle = useMemo(() => {
-      return WeChatThemeRegistry.getLayoutStyles(config.layout, config.primaryColor || '#07c160');
-  }, [config.layout, config.primaryColor]);
+      return WeChatThemeRegistry.getLayoutStyles(resolvedLayoutId, config.primaryColor || '#07c160');
+  }, [resolvedLayoutId, config.primaryColor]);
 
   // 2) 读取代码块主题定义
   const codeThemeDef = useMemo(() => {
@@ -71,13 +73,21 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   const commonTextStyle = {
       fontSize: baseFontSize,
       lineHeight: lineHeightValue,
-      letterSpacing: '0.05em',
-      color: '#333333',
+      letterSpacing: isGuobiTemplate ? '0.03em' : '0.05em',
+      color: isGuobiTemplate ? '#646A73' : '#333333',
       textAlign: (config.justify ? 'justify' : 'left') as any,
       maxWidth: '100%',
       boxSizing: 'border-box' as const,
-      fontFamily: config.layout === 'Classic' ? '"Songti SC", "Noto Serif SC", serif' : '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif'
+      fontFamily: config.layout === 'Classic'
+        ? '"Songti SC", "Noto Serif SC", serif'
+        : '"SF Pro SC", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif'
   };
+
+  const remarkPlugins = useMemo(() => {
+      const plugins = [remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter];
+      if (isGuobiTemplate) plugins.push(remarkGuobiCards);
+      return plugins;
+  }, [isGuobiTemplate]);
 
   // 3) 预处理 Markdown：提取标题、生成引用脚注、规范强调语法
   const { processedMarkdown, footnotes, headerInfo } = useMemo(() => {
@@ -291,12 +301,31 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           let caption = "";
           if (config.captionType === 'title' && props.title) caption = props.title;
           else if (config.captionType === 'alt' && props.alt) caption = props.alt;
+
+          const imageStyle = isGuobiTemplate
+            ? {
+                maxWidth: '100%',
+                height: 'auto',
+                display: 'block',
+                margin: '8px auto',
+                borderRadius: '12px',
+                border: '1px solid rgb(250, 249, 245)',
+                boxSizing: 'border-box' as const
+              }
+            : {
+                maxWidth: '100%',
+                height: 'auto',
+                display: 'block',
+                margin: '0 auto',
+                borderRadius: '6px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              };
           
           return (
-              <section style={{display: 'block', margin: '1.5em 0', textAlign: 'center'}}>
-                  <span style={{display: 'block', maxWidth: '100%', overflow: 'hidden', borderRadius: '6px'}}>
+              <section style={{display: 'block', margin: isGuobiTemplate ? '12px 0' : '1.5em 0', textAlign: 'center'}}>
+                  <span style={{display: 'block', maxWidth: '100%', overflow: 'hidden', borderRadius: isGuobiTemplate ? '12px' : '6px'}}>
                     {/* 图片组件内部负责 data-id 与图片池映射 */}
-                    <StableImage {...props} imagePool={imagePool} style={{maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'}} />
+                    <StableImage {...props} imagePool={imagePool} style={imageStyle} />
                   </span>
                   {caption && (
                       <span style={{display: 'block', marginTop: '0.6em', fontSize: '13px', color: '#888', lineHeight: '1.4'}}>
@@ -307,13 +336,24 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
       },
       p: ({node, children, ...props}: any) => {
+          const guobiParagraphStyle = isGuobiTemplate
+            ? {
+                color: '#646A73',
+                lineHeight: '2',
+                letterSpacing: '0.03em',
+                margin: '12px 0',
+                minHeight: '20px'
+              }
+            : {};
+
           return (
               <p 
                  style={{ 
                      ...commonTextStyle,
-                     marginBottom: '1.5em',
+                     ...guobiParagraphStyle,
+                     marginBottom: isGuobiTemplate ? undefined : '1.5em',
                      textIndent: config.indent ? '2em' : '0',
-                     minHeight: '1em', // 防止空段落塌陷导致节奏跳动
+                     minHeight: isGuobiTemplate ? undefined : '1em', // 防止空段落塌陷导致节奏跳动
                      ...(props.style || {}) // 合并外部样式，保留块引用末段覆盖能力
                  }}
               >
@@ -322,11 +362,25 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
       },
       h1: ({node, children}: any) => <h1 style={{...themeStyle.h1, fontSize: headingSizes.h1}}>{children}</h1>,
-      h2: ({node, children}: any) => <h2 style={{...themeStyle.h2, fontSize: headingSizes.h2}}>{children}</h2>,
-      h3: ({node, children}: any) => <h3 style={{...themeStyle.h3, fontSize: headingSizes.h3}}>{children}</h3>,
+      h2: ({node, children}: any) => <h2 style={{...themeStyle.h2, fontSize: isGuobiTemplate ? ((themeStyle.h2 as any).fontSize || '16px') : headingSizes.h2}}>{children}</h2>,
+      h3: ({node, children}: any) => <h3 style={{...themeStyle.h3, fontSize: isGuobiTemplate ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3}}>{children}</h3>,
       blockquote: ({node, children}: any) => {
           // 扁平化 children，兼容 react-markdown 混合文本/元素输出
           const childrenArray = React.Children.toArray(children);
+          const isGuobiCard = Boolean(
+            (node as any)?.properties?.['data-guobi-card'] ||
+            (node as any)?.data?.hProperties?.['data-guobi-card']
+          );
+          const guobiQuoteStyle = {
+            margin: '1.2em 0',
+            padding: '0.8em 1em',
+            borderRadius: '10px',
+            borderLeft: `4px solid ${hexToRgba(config.primaryColor, 0.35)}`,
+            backgroundColor: 'rgba(250, 249, 245, 0.8)'
+          };
+          const blockquoteStyle = isGuobiTemplate
+            ? (isGuobiCard ? { ...themeStyle.blockquote, ...commonTextStyle } : { ...guobiQuoteStyle, ...commonTextStyle })
+            : { ...themeStyle.blockquote, ...commonTextStyle };
           
           // 找到最后一个有效元素节点，避免空白文本干扰
           let lastElementIndex = -1;
@@ -338,7 +392,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           }
 
           return (
-            <section style={{...themeStyle.blockquote, ...commonTextStyle}}>
+            <section style={blockquoteStyle}>
                 {childrenArray.map((child, index) => {
                         // 仅最后一个有效节点去掉下边距，避免多余留白
                         if (index === lastElementIndex && React.isValidElement(child)) {
@@ -361,7 +415,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         return (
             <ul style={{
                 paddingLeft: isTaskList ? '0' : '1.5em', 
-                marginBottom: '1.5em', 
+                marginBottom: isGuobiTemplate ? '12px' : '1.5em', 
                 listStyleType: isTaskList ? 'none' : 'disc', 
                 color: (themeStyle.list as any).color
             }}>
@@ -369,13 +423,13 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </ul>
         );
       },
-      ol: ({node, children}: any) => <ol style={{paddingLeft: '1.5em', marginBottom: '1.5em', listStyleType: 'decimal', color: (themeStyle.list as any).color}}>{children}</ol>,
+      ol: ({node, children}: any) => <ol style={{paddingLeft: '1.5em', marginBottom: isGuobiTemplate ? '12px' : '1.5em', listStyleType: 'decimal', color: (themeStyle.list as any).color}}>{children}</ol>,
       li: ({node, className, children}: any) => {
          const isTaskList = className?.includes('task-list-item');
          return (
              <li style={{
                 ...commonTextStyle, 
-                marginBottom: '0.2em', 
+                marginBottom: isGuobiTemplate ? '0.5em' : '0.2em', 
                 paddingLeft: isTaskList ? '0' : '0.2em',
                 listStyleType: isTaskList ? 'none' : 'inherit',
                 display: isTaskList ? 'flex' : 'list-item', // 任务列表用 flex 以对齐复选框
@@ -416,7 +470,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
              {children}
           </td>
       )
-  }), [config, themeStyle, imagePool, baseFontSize, lineHeightValue, headingSizes, commonTextStyle, codeThemeDef]);
+  }), [config, themeStyle, imagePool, baseFontSize, lineHeightValue, headingSizes, commonTextStyle, codeThemeDef, isGuobiTemplate]);
 
   return (
     <div 
@@ -464,7 +518,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                         {/* 正文区域 */}
                         <div className="flex-1 px-4 pb-12 wechat-content">
                             <ReactMarkdown 
-                                remarkPlugins={[remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter]}
+                                remarkPlugins={remarkPlugins}
                                 rehypePlugins={[rehypeKatex]}
                                 components={components}
                                 // 允许 local:// 协议，供 StableImage 访问本地缓存图

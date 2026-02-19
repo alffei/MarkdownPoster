@@ -129,3 +129,92 @@ export function remarkCenter() {
     });
   };
 }
+
+/**
+ * Remark 插件：果比卡片分段
+ * 把「二级标题 + 后续内容（直到下一个二级标题）」包装成 blockquote，
+ * 供公众号预览层渲染为果比卡片。
+ */
+export function remarkGuobiCards() {
+  const extractText = (node: any): string => {
+    if (!node) return '';
+    if (typeof node.value === 'string') return node.value;
+    if (Array.isArray(node.children)) {
+      return node.children.map((child: any) => extractText(child)).join('');
+    }
+    return '';
+  };
+
+  const normalizeSectionTitle = (text: string): string => {
+    const cleaned = text
+      .replace(/^\s*[-—]+\s*/, '')
+      .replace(/\s*[-—]+\s*$/, '')
+      .trim();
+
+    return cleaned ? `- ${cleaned} -` : '- 分组 -';
+  };
+
+  const isMarkerParagraph = (node: any): boolean => {
+    if (!node || node.type !== 'paragraph') return false;
+    const text = extractText(node).trim();
+    return /^[-—]\s*.+\s*[-—]$/.test(text);
+  };
+
+  const isSectionStart = (node: any): boolean => {
+    return Boolean(
+      (node?.type === 'heading' && node.depth === 2) ||
+      isMarkerParagraph(node)
+    );
+  };
+
+  const createSectionHeading = (node: any) => {
+    const title = normalizeSectionTitle(extractText(node));
+    return {
+      type: 'heading',
+      depth: 2,
+      children: [{ type: 'text', value: title }]
+    };
+  };
+
+  return (tree: any) => {
+    if (!tree || !Array.isArray(tree.children)) return;
+
+    const source = tree.children;
+    const nextChildren: any[] = [];
+    let i = 0;
+
+    while (i < source.length) {
+      const current = source[i];
+
+      if (isSectionStart(current)) {
+        const sectionHeading = createSectionHeading(current);
+
+        const cardChildren: any[] = [sectionHeading];
+        i += 1;
+
+        while (i < source.length) {
+          const candidate = source[i];
+          if (isSectionStart(candidate)) break;
+          cardChildren.push(candidate);
+          i += 1;
+        }
+
+        nextChildren.push({
+          type: 'blockquote',
+          data: {
+            hProperties: {
+              'data-guobi-card': 'true'
+            }
+          },
+          children: cardChildren
+        });
+        continue;
+      }
+
+      nextChildren.push(current);
+      i += 1;
+    }
+
+    tree.children = nextChildren;
+  };
+}
