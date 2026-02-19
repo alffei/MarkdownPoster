@@ -6,6 +6,11 @@
 import React, { useRef } from 'react';
 import { WeChatConfig, WeChatTemplateKind } from '../types';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
+import {
+  WECHAT_TEMPLATE_OPTIONS,
+  getWeChatTemplateDefinition,
+  getWeChatTemplateDefaultConfig,
+} from '../config/wechatTemplates';
 
 type BooleanConfigKey = 'macCodeBlock' | 'lineNumbers' | 'linkReferences' | 'indent' | 'justify';
 
@@ -15,11 +20,6 @@ interface WeChatAppearancePopoverProps {
   isDarkMode: boolean;
   onClose: () => void;
 }
-
-const templateOptions: { label: string; value: WeChatTemplateKind; summary: string }[] = [
-  { label: '基础', value: 'basic', summary: '通用排版，标题结构可调。' },
-  { label: '果比', value: 'guobi', summary: '固定果比风格，保留专属卡片结构。' }
-];
 
 const detailToggleItems: { label: string; key: BooleanConfigKey }[] = [
   { label: 'Mac 代码块', key: 'macCodeBlock' },
@@ -83,7 +83,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   isDarkMode,
   onClose
 }) => {
-  const isGuobiTemplate = config.template === 'guobi';
+  const templateDef = getWeChatTemplateDefinition(config.template);
   const typographyLayouts = WeChatThemeRegistry
     .getLayouts()
     .filter((lt) => ['Base', 'Classic', 'Vibrant'].includes(lt.id));
@@ -100,17 +100,6 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   // Per-template config snapshots (各模板独立缓存)
   const templateSnapshots = useRef<Partial<Record<WeChatTemplateKind, WeChatConfig>>>({});
 
-  const GUOBI_DEFAULTS: Partial<WeChatConfig> = {
-    primaryColor: '#D97757',
-    fontSize: 'Small',
-    lineHeight: 'compact',
-    indent: false,
-    justify: false,
-    macCodeBlock: false,
-    lineNumbers: false,
-    linkReferences: false,
-  };
-
   const applyTemplate = (template: WeChatTemplateKind) => {
     // 保存当前模板的配置快照
     templateSnapshots.current[config.template] = { ...config };
@@ -120,29 +109,8 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
       // 有快照则恢复
       setConfig({ ...saved, template });
     } else {
-      // 无快照则应用模板默认值
-      const base: WeChatConfig = { ...config, template };
-      if (template === 'guobi') {
-        const color = config.primaryColor.toLowerCase() === '#07c160'
-          ? GUOBI_DEFAULTS.primaryColor!
-          : config.primaryColor;
-        setConfig({ ...base, ...GUOBI_DEFAULTS, primaryColor: color });
-      } else {
-        // 切回基础时恢复基础默认值
-        setConfig({
-          ...base,
-          primaryColor: config.primaryColor.toLowerCase() === '#d97757'
-            ? '#07c160'
-            : config.primaryColor,
-          fontSize: 'Medium',
-          lineHeight: 'comfortable',
-          indent: false,
-          justify: true,
-          macCodeBlock: true,
-          lineNumbers: true,
-          linkReferences: true,
-        });
-      }
+      // 无快照则应用该模板默认值
+      setConfig(getWeChatTemplateDefaultConfig(template));
     }
   };
 
@@ -155,6 +123,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   const rowLabelClass = 'text-xs font-medium opacity-75 shrink-0';
   const segmentLabelClass = `text-xs font-medium mb-3 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`;
   const dividerClass = `border-t my-3 ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`;
+  const rightControlWidthClass = 'ml-2 w-[198px]';
 
   const SegGroup = ({ label, children }: { label: string; children: React.ReactNode }) => (
     <div>
@@ -241,7 +210,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
               主题风格（模板）
             </div>
             <div className="flex gap-3">
-              {templateOptions.map((item) => {
+              {WECHAT_TEMPLATE_OPTIONS.map((item) => {
                 const active = config.template === item.value;
                 return (
                   <button
@@ -271,7 +240,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
             {/* Left: 文字 */}
             <div className="flex-1 pr-5">
               <SegGroup label="文字">
-                <SegRow label={isGuobiTemplate ? '字体风格' : '排版风格'}>
+                <SegRow label={templateDef.typographyControlLabel}>
                   <SegmentedControl
                     options={typographyLayouts.map((lt) => ({ label: lt.name, value: lt.id }))}
                     value={config.layout}
@@ -337,7 +306,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
                 </SegRow>
 
                 <SegRow label="代码块主题">
-                  <div className="relative ml-2 flex-1">
+                  <div className={`relative ${rightControlWidthClass}`}>
                     <select
                       value={config.codeTheme}
                       onChange={(e) => updateConfig('codeTheme', e.target.value)}
@@ -363,7 +332,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
                     options={captionTypes.map((ct) => ({ label: ct.label, value: ct.value }))}
                     value={config.captionType}
                     onChange={(v) => updateConfig('captionType', v as WeChatConfig['captionType'])}
-                    className="ml-2"
+                    className={rightControlWidthClass}
                   />
                 </SegRow>
               </SegGroup>
@@ -380,20 +349,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
 
           <div className="text-center">
             <button
-              onClick={() => setConfig({
-                template: 'basic',
-                layout: 'Base',
-                primaryColor: '#07c160',
-                codeTheme: 'vsDark',
-                macCodeBlock: true,
-                lineNumbers: true,
-                linkReferences: true,
-                indent: false,
-                justify: true,
-                captionType: 'title',
-                fontSize: 'Medium',
-                lineHeight: 'comfortable'
-              })}
+              onClick={() => setConfig(getWeChatTemplateDefaultConfig(config.template))}
               className={`text-xs underline underline-offset-2 transition-opacity opacity-50 hover:opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
                 }`}
             >

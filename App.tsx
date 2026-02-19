@@ -18,6 +18,7 @@ import { useWeChatExport } from './hooks/useWeChatExport';
 import { useProjectExport } from './hooks/useProjectExport';
 import { ThemeRegistry } from './utils/themeRegistry';
 import { repairMarkdownBlock } from './utils/markdownRepair';
+import { getDefaultWeChatConfig, normalizeWeChatConfig } from './config/wechatTemplates';
 
 // 本地存储键名
 const STORAGE_KEY_MARKDOWN = 'markdown_poster_draft';
@@ -183,39 +184,16 @@ export default function App() {
   
   // 9) 公众号配置
   const [weChatConfig, setWeChatConfig] = useState<WeChatConfig>(() => {
+    const fallback = getDefaultWeChatConfig();
     const saved = localStorage.getItem(STORAGE_KEY_WECHAT_CONFIG);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-          template: 'basic',
-          layout: 'Base',
-          primaryColor: '#07c160',
-          codeTheme: 'vsDark',
-          macCodeBlock: true,
-          lineNumbers: true,
-          linkReferences: true,
-          indent: false,
-          justify: true,
-          captionType: 'title',
-          fontSize: 'Medium',
-          lineHeight: 'comfortable',
-          ...parsed
-      };
+      try {
+        return normalizeWeChatConfig(JSON.parse(saved));
+      } catch (e) {
+        console.warn('Failed to parse WeChat config from local storage.', e);
+      }
     }
-    return {
-      template: 'basic',
-      layout: 'Base',
-      primaryColor: '#07c160',
-      codeTheme: 'vsDark',
-      macCodeBlock: true,
-      lineNumbers: true,
-      linkReferences: true,
-      indent: false,
-      justify: true,
-      captionType: 'title',
-      fontSize: 'Medium',
-      lineHeight: 'comfortable'
-    };
+    return fallback;
   });
 
   // 10) 图片池（本地虚拟文件系统）
