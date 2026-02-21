@@ -354,7 +354,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
 
   return (
     <div className={`relative rounded-xl border shadow-xl overflow-hidden ${
-      effectiveTemplate === 'illustration' ? 'w-[960px] max-h-[86vh] flex flex-col' : 'w-[560px]'
+      effectiveTemplate === 'illustration' ? 'w-[960px] max-h-[96vh] flex flex-col' : 'w-[560px]'
     } ${
       isDarkMode
         ? 'bg-[#1e2227] border-[#3e4451] text-[#d4cfbf]'
@@ -385,7 +385,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
         </button>
       </div>
 
-      <div className={effectiveTemplate === 'illustration' ? 'flex-1 min-h-0 flex flex-col' : ''}>
+      <div className={effectiveTemplate === 'illustration' ? 'flex flex-col' : ''}>
         <div className={`${
           effectiveTemplate === 'illustration' ? 'px-6 pt-3' : 'px-4 pt-2'
         } ${
@@ -558,9 +558,9 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
         </div>
 
         {effectiveTemplate === 'illustration' ? (
-          <div className="flex-1 min-h-0 overflow-hidden px-6 py-5">
-            <div className="grid h-full grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
-              <div className="min-h-0 overflow-y-auto space-y-3">
+          <div className="px-6 py-4">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
+              <div className="space-y-3 pb-2">
                 <div className={`rounded-xl border p-3 ${
                   isDarkMode ? 'border-[#3e4451] bg-[#23272e]' : 'border-gray-200 bg-[#f8f6ef]'
                 }`}>
@@ -584,7 +584,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
                     <textarea
                       value={illustrationStylePrompt}
                       onChange={(e) => setIllustrationStylePrompt(e.target.value)}
-                      rows={8}
+                      rows={7}
                       className={`mt-2 w-full rounded-md px-2.5 py-2 text-xs leading-relaxed border resize-y ${
                         isDarkMode
                           ? 'bg-[#1f242c] border-[#3e4451] text-[#d4cfbf]'
@@ -615,13 +615,13 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
                   <textarea
                     value={illustrationContent}
                     onChange={(e) => setIllustrationContent(e.target.value)}
-                    rows={9}
+                    rows={8}
                     className={`mt-2 w-full rounded-md px-2.5 py-2 text-sm leading-relaxed border resize-y ${
                       isDarkMode
                         ? 'bg-[#1f242c] border-[#3e4451] text-[#d4cfbf]'
                         : 'bg-white border-gray-200 text-gray-700'
                     }`}
-                    placeholder="例如：一位科技演讲者在极简舞台演讲（非真实人物）"
+                    placeholder="若你在编辑器中已选中文字，这里会自动填入；也可手动补充描述，例如：一位科技演讲者在极简舞台演讲（非真实人物）"
                   />
                 </div>
 
@@ -673,7 +673,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
 
               <div className="min-h-0 flex items-center justify-center overflow-hidden">
                 <div
-                  className={`relative h-full max-h-[560px] w-full max-w-[460px] rounded-xl border p-3 overflow-hidden ${
+                  className={`relative h-full max-h-[520px] w-full max-w-[460px] rounded-xl border p-3 overflow-hidden ${
                     isDarkMode
                       ? 'bg-[#1f242c] border-[#3e4451]'
                       : 'border-gray-200'
@@ -740,6 +740,53 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
                 </div>
               </div>
             </div>
+            <div className={`mt-4 border-t pt-3 ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={isIllustrationLoading || !illustrationContent.trim()}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors md:min-w-[140px] ${
+                    isIllustrationLoading || !illustrationContent.trim()
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : (isDarkMode
+                        ? 'bg-[#e5c07b] text-[#1e2227] hover:bg-[#d19a66]'
+                        : 'bg-[#997343] text-white hover:bg-[#85633e]')
+                  }`}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" />
+                    <polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10" />
+                    <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14" />
+                  </svg>
+                  {illustrationPreviewUrl
+                    ? (isIllustrationLoading ? '生成中...' : '重新生成')
+                    : (isIllustrationLoading ? '生成中...' : '生成插图')}
+                </button>
+                <div className={`text-xs text-center md:flex-1 ${isDarkMode ? 'text-[#9aa1ac]' : 'text-gray-500'}`}>
+                  生成预览后可插入到当前光标位置
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleApply('insert')}
+                  disabled={!canApply || isIllustrationLoading}
+                  className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors md:min-w-[140px] ${
+                    canApply && !isIllustrationLoading
+                      ? (isDarkMode
+                        ? 'bg-[#e5c07b] text-[#1e2227] hover:bg-[#d19a66]'
+                        : 'bg-[#997343] text-white hover:bg-[#85633e]')
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12h16" />
+                    <path d="M10 6l-6 6 6 6" />
+                  </svg>
+                  插入到正文
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="px-4 py-3">
@@ -762,60 +809,8 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
         )}
       </div>
 
-      <div className={`${
-        effectiveTemplate === 'illustration'
-          ? 'grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-3'
-          : 'flex items-center justify-between px-4 py-3'
-      } border-t ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
-        {effectiveTemplate === 'illustration' ? (
-          <>
-            <div className="inline-flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={isIllustrationLoading || !illustrationContent.trim()}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                  isIllustrationLoading || !illustrationContent.trim()
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : (isDarkMode
-                      ? 'bg-[#e5c07b] text-[#1e2227] hover:bg-[#d19a66]'
-                      : 'bg-[#997343] text-white hover:bg-[#85633e]')
-                }`}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10" />
-                  <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14" />
-                </svg>
-                {illustrationPreviewUrl
-                  ? (isIllustrationLoading ? '生成中...' : '重新生成')
-                  : (isIllustrationLoading ? '生成中...' : '生成插图')}
-              </button>
-            </div>
-            <div className={`text-xs ${isDarkMode ? 'text-[#9aa1ac]' : 'text-gray-500'} text-center`}>
-              生成预览后可插入到当前光标位置
-            </div>
-            <button
-              type="button"
-              onClick={() => handleApply('insert')}
-              disabled={!canApply || isIllustrationLoading}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                canApply && !isIllustrationLoading
-                  ? (isDarkMode
-                    ? 'bg-[#e5c07b] text-[#1e2227] hover:bg-[#d19a66]'
-                    : 'bg-[#997343] text-white hover:bg-[#85633e]')
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12h16" />
-                <path d="M10 6l-6 6 6 6" />
-              </svg>
-              插入到正文
-            </button>
-          </>
-        ) : (
+      {effectiveTemplate !== 'illustration' && (
+      <div className={`flex items-center justify-between px-4 py-3 border-t ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
           <div
             className={`inline-flex items-center rounded-xl border px-2 py-1 gap-1 ${
               isDarkMode ? 'border-[#3e4451] bg-[#23272e]' : 'border-gray-200 bg-[#f7f7f7]'
@@ -875,8 +870,8 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
               {copyState === 'ok' ? '已复制' : copyState === 'err' ? '失败' : '复制'}
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {pendingConfirmMode && (
         <div

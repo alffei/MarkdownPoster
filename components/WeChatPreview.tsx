@@ -17,8 +17,9 @@ import { remarkRuby, remarkCenter, remarkGuobiCards, remarkInspirationSections }
 import { RubyRender } from './RubyRender';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
 import {
+  getWeChatFontStyleDefinition,
+  getWeChatRenderProfile,
   WeChatRemarkPluginKey,
-  getWeChatTemplateDefinition,
 } from '../config/wechatTemplates';
 
 interface WeChatPreviewProps {
@@ -69,14 +70,15 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   containerRef,
   onScroll
 }, ref) => {
-  const templateDef = useMemo(
-    () => getWeChatTemplateDefinition(config.template),
-    [config.template]
+  const templateRender = useMemo(
+    () => getWeChatRenderProfile(config.template, config.typographyStyle),
+    [config.template, config.typographyStyle]
   );
-  const templateRender = templateDef.render;
-  const resolvedLayoutId = templateRender.layoutMode === 'fixed' && templateRender.fixedLayoutId
-    ? templateRender.fixedLayoutId
-    : config.layout;
+  const fontStyleDef = useMemo(
+    () => getWeChatFontStyleDefinition(config.fontStyle),
+    [config.fontStyle]
+  );
+  const resolvedLayoutId = templateRender.fixedLayoutId;
 
   // 1) 根据当前布局与主色，取出主题样式
   const themeStyle = useMemo(() => {
@@ -112,14 +114,12 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   const commonTextStyle = {
     fontSize: baseFontSize,
     lineHeight: lineHeightValue,
-    letterSpacing: templateRender.commonText.letterSpacing,
+    letterSpacing: `calc(${templateRender.commonText.letterSpacing} + ${fontStyleDef.extraLetterSpacing})`,
     color: templateRender.commonText.color,
     textAlign: (config.justify ? 'justify' : 'left') as any,
     maxWidth: '100%',
     boxSizing: 'border-box' as const,
-    fontFamily: config.layout === 'Classic'
-      ? '"Songti SC", "Noto Serif SC", serif'
-      : '"SF Pro SC", "SF Pro Text", "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif'
+    fontFamily: fontStyleDef.fontFamily
   };
 
   const remarkPlugins = useMemo(() => {
@@ -425,9 +425,90 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         );
       },
       h1: ({ node, children }: any) => {
-        return <h1 style={{ ...themeStyle.h1, fontSize: headingSizes.h1 }}>{children}</h1>;
+        if (isInspirationTemplate && templateRender.titleBlockMode === 'keep-first-h1') {
+          inspirationCoverCount += 1;
+          if (inspirationCoverCount === 1) {
+            return (
+              <section
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  margin: '8px 0 24px',
+                  borderRadius: '28px',
+                  padding: '56px 26px 72px',
+                  background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.7)} 0%, ${config.primaryColor} 100%)`,
+                  boxShadow: `0 18px 36px ${hexToRgba(config.primaryColor, 0.28)}`,
+                }}
+              >
+                <section
+                  style={{
+                    position: 'absolute',
+                    top: '22px',
+                    left: '26px',
+                    width: '170px',
+                    height: '170px',
+                    borderRadius: '50%',
+                    border: '8px solid rgba(255,255,255,0.18)',
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'absolute',
+                    top: '54px',
+                    left: '58px',
+                    width: '108px',
+                    height: '108px',
+                    borderRadius: '50%',
+                    border: '8px solid rgba(255,255,255,0.18)',
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'absolute',
+                    right: '-40px',
+                    bottom: '-36px',
+                    width: '220px',
+                    height: '220px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 72%)',
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    bottom: '-34px',
+                    width: '88%',
+                    height: '56px',
+                    borderRadius: '999px',
+                    background: 'rgba(255,255,255,0.96)',
+                  }}
+                />
+                <h1
+                  style={{
+                    margin: 0,
+                    position: 'relative',
+                    zIndex: 2,
+                    color: '#fff',
+                    fontSize: `clamp(${headingSizes.h1}, 8.4vw, 40px)`,
+                    lineHeight: 1.22,
+                    letterSpacing: '0.01em',
+                    fontWeight: 800,
+                    textShadow: '0 3px 16px rgba(0,0,0,0.18)',
+                    maxWidth: '90%',
+                    fontFamily: fontStyleDef.headingFontFamily,
+                  }}
+                >
+                  {children}
+                </h1>
+              </section>
+            );
+          }
+        }
+        return <h1 style={{ ...themeStyle.h1, fontSize: headingSizes.h1, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h1>;
       },
-      h2: ({ node, children }: any) => <h2 style={{ ...themeStyle.h2, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h2 as any).fontSize || '16px') : headingSizes.h2 }}>{children}</h2>,
+      h2: ({ node, children }: any) => <h2 style={{ ...themeStyle.h2, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h2 as any).fontSize || '16px') : headingSizes.h2, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h2>,
       h3: ({ node, children }: any) => {
         if (isInspirationTemplate) {
           return (
@@ -442,6 +523,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 gap: '10px',
                 color: (themeStyle.h3 as any)?.color || '#111827',
                 letterSpacing: '0.02em',
+                fontFamily: fontStyleDef.headingFontFamily,
               }}
             >
               <span
@@ -459,7 +541,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </h3>
           );
         }
-        return <h3 style={{ ...themeStyle.h3, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3 }}>{children}</h3>;
+        return <h3 style={{ ...themeStyle.h3, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h3>;
       },
       blockquote: ({ node, children }: any) => {
         // 扁平化 children，兼容 react-markdown 混合文本/元素输出
@@ -529,6 +611,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     lineHeight: 1.35,
                     letterSpacing: '0.5px',
                     color: '#111827',
+                    fontFamily: fontStyleDef.headingFontFamily,
                   }}
                 >
                   {headingText}
@@ -722,7 +805,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         </td>
       )
     };
-  }, [config, themeStyle, imagePool, baseFontSize, lineHeightValue, headingSizes, commonTextStyle, codeThemeDef, templateRender]);
+  }, [config, themeStyle, imagePool, baseFontSize, lineHeightValue, headingSizes, commonTextStyle, codeThemeDef, templateRender, fontStyleDef]);
 
   return (
     <div

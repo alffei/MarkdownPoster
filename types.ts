@@ -70,13 +70,16 @@ export enum WeChatTheme {
   Simple = 'Simple'
 }
 
-export type WeChatTemplateKind = 'basic' | 'guobi' | 'inspiration';
+export type WeChatTemplateKind = 'basic' | 'guobi';
+export type WeChatTypographyStyleKind = 'standard' | 'classic' | 'vibrant' | 'inspiration';
+export type WeChatFontStyleKind = 'standard' | 'classic' | 'vibrant';
 
 export interface WeChatConfig {
-  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi|inspiration (fixed structure)
-  // In basic template: controls layout structure.
-  // In guobi template: only controls text typography style (font family).
-  layout: LayoutTheme;    // Base/Classic/Vibrant
+  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi (fixed structure)
+  // Typography style controls markdown structure rendering (title/card/section behavior).
+  typographyStyle: WeChatTypographyStyleKind;
+  // Font style controls only font family & text flavor; does not change structure.
+  fontStyle: WeChatFontStyleKind;
   primaryColor: string;   // Hex color for the theme
   codeTheme: string;      // e.g., 'dracula', 'github', 'vsDark', 'vsLight'
   macCodeBlock: boolean;

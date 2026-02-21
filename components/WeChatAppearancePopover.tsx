@@ -4,11 +4,17 @@
  */
 
 import React, { useRef } from 'react';
-import { WeChatConfig, WeChatTemplateKind } from '../types';
+import {
+  WeChatConfig,
+  WeChatFontStyleKind,
+  WeChatTemplateKind,
+  WeChatTypographyStyleKind,
+} from '../types';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
 import {
+  WECHAT_FONT_STYLE_OPTIONS,
   WECHAT_TEMPLATE_OPTIONS,
-  getWeChatTemplateDefinition,
+  WECHAT_TYPOGRAPHY_STYLE_OPTIONS,
   getWeChatTemplateDefaultConfig,
 } from '../config/wechatTemplates';
 
@@ -56,14 +62,6 @@ const WeChatTemplateThumbnail: React.FC<{
       topBarClass: 'border-b border-[#dfd6ca]',
       topLabel: 'GUOBI',
     },
-    inspiration: {
-      frameClass: 'bg-[#fff7ed]',
-      cardClass: 'bg-[#fffdf8] border border-[#fdba74]',
-      titleClass: 'text-[#9a3412]',
-      accentColor: '#D97706',
-      topBarClass: 'border-b border-[#fdba74]',
-      topLabel: 'INSPIRE',
-    },
   };
   const visual = visualMap[template];
 
@@ -106,10 +104,8 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   isDarkMode,
   onClose
 }) => {
-  const templateDef = getWeChatTemplateDefinition(config.template);
-  const typographyLayouts = WeChatThemeRegistry
-    .getLayouts()
-    .filter((lt) => ['Base', 'Classic', 'Vibrant'].includes(lt.id));
+  const typographyStyles = WECHAT_TYPOGRAPHY_STYLE_OPTIONS;
+  const fontStyles = WECHAT_FONT_STYLE_OPTIONS;
   const colors = WeChatThemeRegistry.getColorPresets();
   const fontSizes = WeChatThemeRegistry.getFontSizes();
   const lineHeights = WeChatThemeRegistry.getLineHeights();
@@ -120,20 +116,57 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
     setConfig({ ...config, [key]: value });
   };
 
-  // Per-template config snapshots (各模板独立缓存)
-  const templateSnapshots = useRef<Partial<Record<WeChatTemplateKind, WeChatConfig>>>({});
+  const snapshotKey = (
+    template: WeChatTemplateKind,
+    typographyStyle: WeChatTypographyStyleKind
+  ) => (template === 'basic' ? `basic:${typographyStyle}` : 'guobi');
+
+  // Per-template+style snapshots (各模板/排版风格独立缓存)
+  const templateSnapshots = useRef<Record<string, WeChatConfig>>({});
+  const lastBasicTypographyStyleRef = useRef<WeChatTypographyStyleKind>(config.typographyStyle);
+
+  if (config.template === 'basic' && lastBasicTypographyStyleRef.current !== config.typographyStyle) {
+    lastBasicTypographyStyleRef.current = config.typographyStyle;
+  }
 
   const applyTemplate = (template: WeChatTemplateKind) => {
-    // 保存当前模板的配置快照
-    templateSnapshots.current[config.template] = { ...config };
+    templateSnapshots.current[snapshotKey(config.template, config.typographyStyle)] = { ...config };
+    if (config.template === 'basic') {
+      lastBasicTypographyStyleRef.current = config.typographyStyle;
+    }
 
-    const saved = templateSnapshots.current[template];
+    const targetTypographyStyle: WeChatTypographyStyleKind = template === 'basic'
+      ? (config.template === 'basic' ? config.typographyStyle : lastBasicTypographyStyleRef.current)
+      : 'standard';
+    const key = snapshotKey(template, targetTypographyStyle);
+    const saved = templateSnapshots.current[key];
     if (saved) {
-      // 有快照则恢复
-      setConfig({ ...saved, template });
+      setConfig({
+        ...saved,
+        template,
+        typographyStyle: targetTypographyStyle,
+      });
+      return;
+    }
+
+    setConfig(getWeChatTemplateDefaultConfig(template, targetTypographyStyle));
+  };
+
+  const applyTypographyStyle = (style: WeChatTypographyStyleKind) => {
+    if (config.template !== 'basic') return;
+    templateSnapshots.current[snapshotKey(config.template, config.typographyStyle)] = { ...config };
+    lastBasicTypographyStyleRef.current = style;
+
+    const key = snapshotKey('basic', style);
+    const saved = templateSnapshots.current[key];
+    if (saved) {
+      setConfig({
+        ...saved,
+        template: 'basic',
+        typographyStyle: style,
+      });
     } else {
-      // 无快照则应用该模板默认值
-      setConfig(getWeChatTemplateDefaultConfig(template));
+      setConfig(getWeChatTemplateDefaultConfig('basic', style));
     }
   };
 
@@ -263,11 +296,22 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
             {/* Left: 文字 */}
             <div className="flex-1 pr-5">
               <SegGroup label="文字">
-                <SegRow label={templateDef.typographyControlLabel}>
+                {config.template === 'basic' && (
+                  <SegRow label="排版风格">
+                    <SegmentedControl
+                      options={typographyStyles.map((item) => ({ label: item.label, value: item.value }))}
+                      value={config.typographyStyle}
+                      onChange={(v) => applyTypographyStyle(v as WeChatTypographyStyleKind)}
+                      className="ml-2"
+                    />
+                  </SegRow>
+                )}
+
+                <SegRow label="字体风格">
                   <SegmentedControl
-                    options={typographyLayouts.map((lt) => ({ label: lt.name, value: lt.id }))}
-                    value={config.layout}
-                    onChange={(v) => updateConfig('layout', v)}
+                    options={fontStyles.map((item) => ({ label: item.label, value: item.value }))}
+                    value={config.fontStyle}
+                    onChange={(v) => updateConfig('fontStyle', v as WeChatFontStyleKind)}
                     className="ml-2"
                   />
                 </SegRow>
@@ -372,7 +416,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
 
           <div className="text-center">
             <button
-              onClick={() => setConfig(getWeChatTemplateDefaultConfig(config.template))}
+              onClick={() => setConfig(getWeChatTemplateDefaultConfig(config.template, config.typographyStyle))}
               className={`text-xs underline underline-offset-2 transition-opacity opacity-50 hover:opacity-80 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
                 }`}
             >
