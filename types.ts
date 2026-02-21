@@ -70,10 +70,10 @@ export enum WeChatTheme {
   Simple = 'Simple'
 }
 
-export type WeChatTemplateKind = 'basic' | 'guobi';
+export type WeChatTemplateKind = 'basic' | 'guobi' | 'inspiration';
 
 export interface WeChatConfig {
-  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi (fixed structure)
+  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi|inspiration (fixed structure)
   // In basic template: controls layout structure.
   // In guobi template: only controls text typography style (font family).
   layout: LayoutTheme;    // Base/Classic/Vibrant

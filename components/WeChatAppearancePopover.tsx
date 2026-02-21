@@ -33,26 +33,49 @@ const WeChatTemplateThumbnail: React.FC<{
   isActive: boolean;
   isDarkMode: boolean;
 }> = ({ template, label, isActive, isDarkMode }) => {
-  const frameClass = template === 'guobi'
-    ? 'bg-[#f0ece6]'
-    : (isDarkMode ? 'bg-[#272c34]' : 'bg-gray-100');
-  const cardClass = template === 'guobi'
-    ? 'bg-[#f7f4ef] border border-[#dfd6ca]'
-    : (isDarkMode ? 'bg-[#1f242c] border border-[#3e4451]' : 'bg-white border border-gray-200');
-  const titleClass = template === 'guobi'
-    ? 'text-[#4e463d]'
-    : (isDarkMode ? 'text-gray-200' : 'text-gray-800');
-  const accentColor = template === 'guobi' ? '#D97757' : '#07c160';
+  const visualMap: Record<WeChatTemplateKind, {
+    frameClass: string;
+    cardClass: string;
+    titleClass: string;
+    accentColor: string;
+    topBarClass: string;
+    topLabel?: string;
+  }> = {
+    basic: {
+      frameClass: isDarkMode ? 'bg-[#272c34]' : 'bg-gray-100',
+      cardClass: isDarkMode ? 'bg-[#1f242c] border border-[#3e4451]' : 'bg-white border border-gray-200',
+      titleClass: isDarkMode ? 'text-gray-200' : 'text-gray-800',
+      accentColor: '#07c160',
+      topBarClass: isDarkMode ? 'border-b border-[#3e4451]' : 'border-b border-gray-100',
+    },
+    guobi: {
+      frameClass: 'bg-[#f0ece6]',
+      cardClass: 'bg-[#f7f4ef] border border-[#dfd6ca]',
+      titleClass: 'text-[#4e463d]',
+      accentColor: '#D97757',
+      topBarClass: 'border-b border-[#dfd6ca]',
+      topLabel: 'GUOBI',
+    },
+    inspiration: {
+      frameClass: 'bg-[#fff7ed]',
+      cardClass: 'bg-[#fffdf8] border border-[#fdba74]',
+      titleClass: 'text-[#9a3412]',
+      accentColor: '#D97706',
+      topBarClass: 'border-b border-[#fdba74]',
+      topLabel: 'INSPIRE',
+    },
+  };
+  const visual = visualMap[template];
 
   return (
     <div
       className={`w-full aspect-[4/3] rounded-xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-200 border-2 ${isActive
         ? (isDarkMode ? 'border-[#98c379] ring-2 ring-[#98c379]/25' : 'border-blue-500 ring-2 ring-blue-500/20')
         : (isDarkMode ? 'border-[#3e4451] group-hover:border-[#5c6370]' : 'border-gray-200 group-hover:border-blue-300')
-        } ${frameClass}`}
+        } ${visual.frameClass}`}
     >
-      <div className={`w-[80%] h-[75%] rounded-lg overflow-hidden flex flex-col ${cardClass}`}>
-        <div className={`h-4 px-1.5 flex items-center ${template === 'guobi' ? 'border-b border-[#dfd6ca]' : (isDarkMode ? 'border-b border-[#3e4451]' : 'border-b border-gray-100')}`}>
+      <div className={`w-[80%] h-[75%] rounded-lg overflow-hidden flex flex-col ${visual.cardClass}`}>
+        <div className={`h-4 px-1.5 flex items-center ${visual.topBarClass}`}>
           {template === 'basic' ? (
             <div className="flex gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
@@ -60,14 +83,14 @@ const WeChatTemplateThumbnail: React.FC<{
               <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
             </div>
           ) : (
-            <div className="w-full text-center text-[7px] tracking-[0.15em] text-[#7a6b5f]">GUOBI</div>
+            <div className="w-full text-center text-[7px] tracking-[0.15em] text-[#7a6b5f]">{visual.topLabel}</div>
           )}
         </div>
 
         <div className="flex-1 p-1.5 flex flex-col items-center justify-center gap-1">
-          <div className={`text-[10px] font-bold tracking-tight ${titleClass}`}>{label}</div>
-          <div className="w-full rounded-sm h-3.5 flex items-center px-1" style={{ backgroundColor: `${accentColor}1A` }}>
-            <div className="h-1.5 w-full rounded-sm" style={{ backgroundColor: accentColor }} />
+          <div className={`text-[10px] font-bold tracking-tight ${visual.titleClass}`}>{label}</div>
+          <div className="w-full rounded-sm h-3.5 flex items-center px-1" style={{ backgroundColor: `${visual.accentColor}1A` }}>
+            <div className="h-1.5 w-full rounded-sm" style={{ backgroundColor: visual.accentColor }} />
           </div>
           <div className={`w-full h-0.5 rounded-sm ${isDarkMode && template === 'basic' ? 'bg-[#3e4451]' : 'bg-black/10'}`} />
           <div className={`w-3/4 h-0.5 rounded-sm ${isDarkMode && template === 'basic' ? 'bg-[#3e4451]' : 'bg-black/10'}`} />

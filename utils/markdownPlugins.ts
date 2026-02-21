@@ -218,3 +218,66 @@ export function remarkGuobiCards() {
     tree.children = nextChildren;
   };
 }
+
+/**
+ * Remark 插件：灵感回路章节头
+ * 把 h2 标题转换为带编号元数据的容器，交给渲染层绘制编号方块 + 章节标题。
+ */
+export function remarkInspirationSections() {
+  const extractText = (node: any): string => {
+    if (!node) return '';
+    if (typeof node.value === 'string') return node.value;
+    if (Array.isArray(node.children)) {
+      return node.children.map((child: any) => extractText(child)).join('');
+    }
+    return '';
+  };
+
+  const normalizeTitle = (text: string): string => (
+    text
+      .replace(/^\s*([0-9]+|[一二三四五六七八九十百零]+)\s*[、.．:：)\-]\s*/, '')
+      .trim()
+  );
+
+  const toChineseIndex = (index: number): string => {
+    const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    if (index <= 10) return index === 10 ? '十' : digits[index];
+    if (index < 20) return `十${digits[index - 10]}`;
+    if (index < 100) {
+      const tens = Math.floor(index / 10);
+      const ones = index % 10;
+      return `${digits[tens]}十${ones ? digits[ones] : ''}`;
+    }
+    return String(index);
+  };
+
+  return (tree: any) => {
+    if (!tree || !Array.isArray(tree.children)) return;
+
+    let sectionIndex = 0;
+    tree.children = tree.children.map((node: any) => {
+      if (node?.type === 'heading' && node.depth === 2) {
+        sectionIndex += 1;
+        const rawTitle = extractText(node);
+        const sectionTitle = normalizeTitle(rawTitle) || rawTitle.trim() || `章节 ${sectionIndex}`;
+        return {
+          type: 'blockquote',
+          data: {
+            hProperties: {
+              'data-inspiration-section': 'true',
+              'data-inspiration-index': toChineseIndex(sectionIndex),
+            },
+          },
+          children: [
+            {
+              type: 'heading',
+              depth: 2,
+              children: [{ type: 'text', value: sectionTitle }],
+            },
+          ],
+        };
+      }
+      return node;
+    });
+  };
+}

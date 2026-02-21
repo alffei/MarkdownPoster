@@ -228,6 +228,63 @@ layouts:
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------
+  # [Inspiration] 灵感回路
+  # ----------------------------------------------------------------------------
+  - id: "Inspiration"
+    name: "灵感回路"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.1em"
+        marginBottom: "0.9em"
+        lineHeight: "1.28"
+        color: "#ffffff"
+        background: "linear-gradient(135deg, {{primary_0.8}} 0%, {{primary}} 100%)"
+        borderRadius: "22px"
+        padding: "20px 22px"
+      h2:
+        fontWeight: "bold"
+        marginTop: "22px"
+        marginBottom: "16px"
+        color: "#111827"
+        backgroundColor: "{{primary_0.05}}"
+        borderLeft: "5px solid {{primary}}"
+        borderRadius: "12px"
+        padding: "10px 12px"
+        fontSize: "18px"
+        letterSpacing: "0.6px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "18px"
+        marginBottom: "12px"
+        lineHeight: "1.65"
+        color: "{{primary}}"
+        fontSize: "16px"
+      list:
+        color: "#374151"
+      blockquote:
+        margin: "18px 0"
+        padding: "18px"
+        borderTopLeftRadius: "4px"
+        borderBottomLeftRadius: "4px"
+        borderTopRightRadius: "12px"
+        borderBottomRightRadius: "12px"
+        borderLeft: "4px solid {{primary_0.8}}"
+        background: "{{primary_0.05}}"
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)"
+        color: "#4b5563"
+      link:
+        color: "{{primary}}"
+        fontWeight: "bold"
+        textDecoration: "underline"
+        textUnderlineOffset: "3px"
+      hr:
+        border: "0"
+        height: "1px"
+        background: "linear-gradient(to right, {{primary_0.7}}, {{primary_0.1}} 80%, rgba(255,255,255,0))"
+        margin: "2em 0"
+
+  # ----------------------------------------------------------------------------
   # [Guobi] 果比（模板结构样式，排版风格按钮仅影响字体）
   # ----------------------------------------------------------------------------
   - id: "Guobi"

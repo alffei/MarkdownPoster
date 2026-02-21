@@ -5,11 +5,12 @@
 import { CSSProperties } from 'react';
 import { WeChatConfig, WeChatTemplateKind } from '../types';
 
-export type WeChatRemarkPluginKey = 'guobiCards';
+export type WeChatRemarkPluginKey = 'guobiCards' | 'inspirationSections';
 
 export interface WeChatTemplateRenderProfile {
   layoutMode: 'follow-config' | 'fixed';
   fixedLayoutId?: string;
+  titleBlockMode: 'header-only' | 'keep-first-h1';
   headingSizeMode: 'scaled' | 'keep-layout-h2-h3';
   remarkPluginKeys: WeChatRemarkPluginKey[];
   commonText: {
@@ -31,7 +32,7 @@ export interface WeChatTemplateRenderProfile {
     itemMarginBottom: string;
   };
   blockquote: {
-    mode: 'theme-only' | 'card-aware-guobi';
+    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections';
   };
 }
 
@@ -72,6 +73,20 @@ const GUOBI_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   lineHeight: 'compact',
 };
 
+const INSPIRATION_DEFAULTS: Omit<WeChatConfig, 'template'> = {
+  layout: 'Base',
+  primaryColor: '#D97706',
+  codeTheme: 'vsDark',
+  macCodeBlock: false,
+  lineNumbers: false,
+  linkReferences: false,
+  indent: false,
+  justify: false,
+  captionType: 'none',
+  fontSize: 'Medium',
+  lineHeight: 'comfortable',
+};
+
 const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefinition> = {
   basic: {
     value: 'basic',
@@ -81,6 +96,7 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
     defaults: BASIC_DEFAULTS,
     render: {
       layoutMode: 'follow-config',
+      titleBlockMode: 'header-only',
       headingSizeMode: 'scaled',
       remarkPluginKeys: [],
       commonText: {
@@ -122,6 +138,7 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
     render: {
       layoutMode: 'fixed',
       fixedLayoutId: 'Guobi',
+      titleBlockMode: 'header-only',
       headingSizeMode: 'keep-layout-h2-h3',
       remarkPluginKeys: ['guobiCards'],
       commonText: {
@@ -156,6 +173,51 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
       },
       blockquote: {
         mode: 'card-aware-guobi',
+      },
+    },
+  },
+  inspiration: {
+    value: 'inspiration',
+    label: '灵感回路',
+    summary: '暖橙渐变专题风格，强调章节与信息卡片。',
+    typographyControlLabel: '字体风格',
+    defaults: INSPIRATION_DEFAULTS,
+    render: {
+      layoutMode: 'fixed',
+      fixedLayoutId: 'Inspiration',
+      titleBlockMode: 'header-only',
+      headingSizeMode: 'keep-layout-h2-h3',
+      remarkPluginKeys: ['inspirationSections'],
+      commonText: {
+        letterSpacing: '0.025em',
+        color: '#3D3D3D',
+      },
+      image: {
+        sectionMargin: '16px 0',
+        wrapperRadius: '16px',
+        style: {
+          maxWidth: '100%',
+          height: 'auto',
+          display: 'block',
+          margin: '0 auto',
+          borderRadius: '16px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+          border: '1px solid rgba(0, 0, 0, 0.02)',
+          boxSizing: 'border-box',
+        },
+      },
+      paragraph: {
+        style: {
+          lineHeight: '2',
+        },
+        marginBottom: '14px',
+      },
+      list: {
+        blockMarginBottom: '16px',
+        itemMarginBottom: '0.45em',
+      },
+      blockquote: {
+        mode: 'inspiration-sections',
       },
     },
   },
