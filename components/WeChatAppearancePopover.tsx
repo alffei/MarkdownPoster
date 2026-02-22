@@ -62,6 +62,14 @@ const WeChatTemplateThumbnail: React.FC<{
       topBarClass: 'border-b border-[#dfd6ca]',
       topLabel: 'GUOBI',
     },
+    spring: {
+      frameClass: 'bg-[#f2f8ea]',
+      cardClass: 'bg-[#fbfef7] border border-[#d8e8c5]',
+      titleClass: 'text-[#2f5f0f]',
+      accentColor: '#417505',
+      topBarClass: 'border-b border-[#d8e8c5]',
+      topLabel: 'SPRING',
+    },
   };
   const visual = visualMap[template];
 
@@ -119,7 +127,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   const snapshotKey = (
     template: WeChatTemplateKind,
     typographyStyle: WeChatTypographyStyleKind
-  ) => (template === 'basic' ? `basic:${typographyStyle}` : 'guobi');
+  ) => (template === 'basic' ? `basic:${typographyStyle}` : `template:${template}`);
 
   // Per-template+style snapshots (各模板/排版风格独立缓存)
   const templateSnapshots = useRef<Record<string, WeChatConfig>>({});

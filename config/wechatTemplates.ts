@@ -10,7 +10,7 @@ import {
   WeChatTypographyStyleKind,
 } from '../types';
 
-export type WeChatRemarkPluginKey = 'guobiCards' | 'inspirationSections';
+export type WeChatRemarkPluginKey = 'guobiCards' | 'inspirationSections' | 'springSections';
 
 export interface WeChatTemplateRenderProfile {
   layoutMode: 'fixed';
@@ -37,7 +37,7 @@ export interface WeChatTemplateRenderProfile {
     itemMarginBottom: string;
   };
   blockquote: {
-    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections';
+    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections';
   };
 }
 
@@ -72,6 +72,11 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
     value: 'guobi',
     label: '果比',
     summary: '固定果比页面结构，保留专属卡片样式。',
+  },
+  spring: {
+    value: 'spring',
+    label: '春序',
+    summary: '清新绿色专题模板，突出分节与装饰细节。',
   },
 };
 
@@ -180,6 +185,21 @@ const GUOBI_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   captionType: 'none',
   fontSize: 'Small',
   lineHeight: 'compact',
+};
+
+const SPRING_DEFAULTS: Omit<WeChatConfig, 'template'> = {
+  typographyStyle: 'standard',
+  fontStyle: 'standard',
+  primaryColor: '#417505',
+  codeTheme: 'vsLight',
+  macCodeBlock: false,
+  lineNumbers: false,
+  linkReferences: false,
+  indent: false,
+  justify: true,
+  captionType: 'none',
+  fontSize: 'Small',
+  lineHeight: 'comfortable',
 };
 
 const BASIC_STANDARD_RENDER: WeChatTemplateRenderProfile = {
@@ -316,10 +336,53 @@ const GUOBI_RENDER: WeChatTemplateRenderProfile = {
   },
 };
 
+const SPRING_RENDER: WeChatTemplateRenderProfile = {
+  layoutMode: 'fixed',
+  fixedLayoutId: 'SpringFresh',
+  titleBlockMode: 'header-only',
+  headingSizeMode: 'keep-layout-h2-h3',
+  remarkPluginKeys: ['springSections'],
+  commonText: {
+    letterSpacing: '0.09em',
+    color: '#333333',
+  },
+  image: {
+    sectionMargin: '14px 0',
+    wrapperRadius: '8px',
+    style: {
+      maxWidth: '100%',
+      height: 'auto',
+      display: 'block',
+      margin: '0 auto',
+      borderRadius: '0',
+      border: '8px solid #ffffff',
+      boxSizing: 'border-box',
+      boxShadow: '0 0 0 1px rgba(65, 117, 5, 0.18)',
+    },
+  },
+  paragraph: {
+    style: {
+      color: '#333333',
+      lineHeight: '2.2',
+      letterSpacing: '0.09em',
+      margin: '10px 0',
+      minHeight: '1em',
+    },
+  },
+  list: {
+    blockMarginBottom: '14px',
+    itemMarginBottom: '0.45em',
+  },
+  blockquote: {
+    mode: 'spring-sections',
+  },
+};
+
 const LEGACY_LAYOUT_TO_FONT_STYLE: Record<string, WeChatFontStyleKind> = {
   Base: 'standard',
   Classic: 'classic',
   Vibrant: 'vibrant',
+  SpringFresh: 'standard',
   base: 'standard',
   classicLayout: 'classic',
   vibrantLayout: 'vibrant',
@@ -332,6 +395,7 @@ const LEGACY_LAYOUT_TO_TYPOGRAPHY_STYLE: Record<string, WeChatTypographyStyleKin
   Base: 'standard',
   Classic: 'classic',
   Vibrant: 'vibrant',
+  SpringFresh: 'standard',
   base: 'standard',
   standard: 'standard',
   classic: 'classic',
@@ -366,6 +430,9 @@ const normalizeTemplateValue = (value: unknown): {
 } => {
   if (value === 'guobi') {
     return { template: 'guobi' };
+  }
+  if (value === 'springFresh') {
+    return { template: 'spring' };
   }
   if (value === 'inspiration') {
     return { template: 'basic', forcedTypographyStyle: 'inspiration' };
@@ -430,6 +497,7 @@ export const getWeChatRenderProfile = (
   typographyStyle: WeChatTypographyStyleKind
 ): WeChatTemplateRenderProfile => {
   if (template === 'guobi') return GUOBI_RENDER;
+  if (template === 'spring') return SPRING_RENDER;
   if (typographyStyle === 'classic') return BASIC_CLASSIC_RENDER;
   if (typographyStyle === 'vibrant') return BASIC_VIBRANT_RENDER;
   if (typographyStyle === 'inspiration') return BASIC_INSPIRATION_RENDER;
@@ -444,6 +512,14 @@ export const getWeChatTemplateDefaultConfig = (
     return {
       template,
       ...GUOBI_DEFAULTS,
+      typographyStyle: 'standard',
+    };
+  }
+
+  if (template === 'spring') {
+    return {
+      template,
+      ...SPRING_DEFAULTS,
       typographyStyle: 'standard',
     };
   }

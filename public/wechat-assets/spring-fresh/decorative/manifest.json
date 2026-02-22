@@ -1,0 +1,82 @@
+{
+  "assetPackId": "wx-spring-fresh-v1",
+  "templateScope": "wechat-theme",
+  "themeId": "spring",
+  "namingRule": "<channel>-<theme>-<category>-<element>-<position>-v<version>.<ext>",
+  "files": [
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-curl-line-top-right-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/1d872fe55b1edec8335867e88cdd3ed9.png",
+      "bytes": 246979
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-main-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/3d03beff0dca4f1ee1a66ba090e6ccc7.png",
+      "bytes": 50441
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-thin-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/b0310dbdc91326fc714987eb776706b7.png",
+      "bytes": 51223
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-dot-cluster-mid-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/96095a36aa6fb1e9617a1cb3454ad37d.png",
+      "bytes": 164279
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-dot-cluster-top-right-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/19aa13d4e15a9bfd0cd2d8d41fb5a6fc.png",
+      "bytes": 161438
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-flower-riser-vertical-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/dd78466c8c73fed419dc34d83c11c070.png",
+      "bytes": 504641
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-grid-flower-badge-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/20ca4d2828a44a12d4b857b2b716c29d.png",
+      "bytes": 334934
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-halo-center-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/84718621a27e8b4da75eb5e95de5294b.png",
+      "bytes": 655026
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-bottom-left-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/f14cc31400e98b6a2d9d3be755889a2e.png",
+      "bytes": 619309
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-right-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/7b218ca98a957f1f7a08a2042c7d51e2.png",
+      "bytes": 351698
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-top-left-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/11e013b558df63d2bc3865cd6f0f1f89.png",
+      "bytes": 350191
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-swallow-accent-v1.gif",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/5d0c1029a2ba60cb4db42862f40a4609.gif",
+      "bytes": 919213
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-watercolor-wash-top-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/6153fb7b2b1816fce0da371d96f91f6b.png",
+      "bytes": 568518
+    },
+    {
+      "file": "public/wechat-assets/spring-fresh/decorative/wx-spring-deco-title-brush-bg-v1.png",
+      "source_url": "https://bcn.135editor.com/files/images/editor_styles/24a3049c16250e3272f3cafcc6778efa.png",
+      "bytes": 345244
+    }
+  ],
+  "notes": [
+    "春季主题素材统一维护于当前目录。",
+    "文件名已去除第三方平台标识与 hash。"
+  ]
+}

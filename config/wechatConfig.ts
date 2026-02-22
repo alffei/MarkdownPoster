@@ -12,6 +12,7 @@ export const WECHAT_THEME_CONFIG_YAML = `
 # ==============================================================================
 colorPresets:
   - { color: '#07c160', label: '微信绿' }
+  - { color: '#417505', label: '春芽绿' }
   - { color: '#D97757', label: '果比橙' }
   - { color: '#997343', label: '雅致金' }
   - { color: '#3b82f6', label: '科技蓝' }
@@ -282,6 +283,53 @@ layouts:
         border: "0"
         height: "1px"
         background: "linear-gradient(to right, {{primary_0.7}}, {{primary_0.1}} 80%, rgba(255,255,255,0))"
+        margin: "2em 0"
+
+  # ----------------------------------------------------------------------------
+  # [Guobi] 果比（模板结构样式，排版风格按钮仅影响字体）
+  # ----------------------------------------------------------------------------
+  - id: "SpringFresh"
+    name: "春序"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.9em"
+        lineHeight: "1.36"
+        color: "#2f5f0f"
+      h2:
+        fontWeight: "bold"
+        marginTop: "1.6em"
+        marginBottom: "0.8em"
+        lineHeight: "1.4"
+        color: "#ffffff"
+        textAlign: "center"
+        letterSpacing: "0.12em"
+        fontSize: "20px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.6em"
+        lineHeight: "1.9"
+        fontSize: "16px"
+        color: "#417505"
+      list:
+        color: "#333333"
+      blockquote:
+        margin: "18px 0"
+        padding: "14px 16px"
+        borderRadius: "8px"
+        borderLeft: "3px solid #9abe6a"
+        border: "1px solid #d9e8c7"
+        backgroundColor: "#f3faed"
+        color: "#333333"
+      link:
+        color: "#417505"
+        fontWeight: "bold"
+        textDecoration: "none"
+      hr:
+        border: "0"
+        borderTop: "1px solid rgba(65,117,5,0.32)"
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------

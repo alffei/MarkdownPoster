@@ -13,7 +13,13 @@ import { WeChatConfig } from '../types';
 import { hexToRgba } from '../utils/themeUtils';
 import { WeChatThemeRegistry } from '../utils/wechatThemeRegistry';
 import { StableImage } from './StableImage';
-import { remarkRuby, remarkCenter, remarkGuobiCards, remarkInspirationSections } from '../utils/markdownPlugins';
+import {
+  remarkRuby,
+  remarkCenter,
+  remarkGuobiCards,
+  remarkInspirationSections,
+  remarkSpringSections,
+} from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
 import {
@@ -59,6 +65,13 @@ const parseInspirationMarker = (text: string): { kind: InspirationMarkerKind; cl
   }
 
   return { kind: 'none', cleanText: source };
+};
+
+const SPRING_DECORATIVE_ASSETS = {
+  titleBrush: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-title-brush-bg-v1.png',
+  curveBottom: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-thin-v1.png',
+  leafTopLeft: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-top-left-v1.png',
+  leafRight: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-right-v1.png',
 };
 
 export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
@@ -126,6 +139,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     const templateRemarkPlugins: Record<WeChatRemarkPluginKey, any> = {
       guobiCards: remarkGuobiCards,
       inspirationSections: remarkInspirationSections,
+      springSections: remarkSpringSections,
     };
     const plugins = [remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter];
     templateRender.remarkPluginKeys.forEach((key) => {
@@ -184,6 +198,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   // 4) 自定义渲染器：确保和公众号显示习惯一致
   const components = useMemo(() => {
     const isInspirationTemplate = templateRender.blockquote.mode === 'inspiration-sections';
+    const isSpringTemplateMode = templateRender.blockquote.mode === 'spring-sections';
     let inspirationCoverCount = 0;
 
     return {
@@ -325,7 +340,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         }
 
         // 行内代码使用主色的低透明背景，保持一致性
-        const isPillStyle = isInspirationTemplate;
+        const isPillStyle = isInspirationTemplate || isSpringTemplateMode;
         const inlineCodeBg = isPillStyle ? hexToRgba(config.primaryColor, 0.15) : hexToRgba(config.primaryColor, 0.1);
         const inlineCodeColor = config.primaryColor;
 
@@ -541,6 +556,33 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </h3>
           );
         }
+        if (isSpringTemplateMode) {
+          return (
+            <h3
+              style={{
+                ...themeStyle.h3,
+                fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                letterSpacing: '0.06em',
+                fontFamily: fontStyleDef.headingFontFamily,
+              }}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: config.primaryColor,
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
+              <span>{children}</span>
+            </h3>
+          );
+        }
         return <h3 style={{ ...themeStyle.h3, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h3>;
       },
       blockquote: ({ node, children }: any) => {
@@ -561,9 +603,18 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           (node as any)?.properties?.['data-inspiration-section'] ||
           (node as any)?.data?.hProperties?.['data-inspiration-section']
         );
+        const isSpringSection = Boolean(
+          (node as any)?.properties?.['data-spring-section'] ||
+          (node as any)?.data?.hProperties?.['data-spring-section']
+        );
         const inspirationSectionIndex = String(
           (node as any)?.properties?.['data-inspiration-index'] ||
           (node as any)?.data?.hProperties?.['data-inspiration-index'] ||
+          ''
+        );
+        const springSectionTitle = String(
+          (node as any)?.properties?.['data-spring-title'] ||
+          (node as any)?.data?.hProperties?.['data-spring-title'] ||
           ''
         );
 
@@ -621,6 +672,148 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
         }
 
+        if (templateRender.blockquote.mode === 'spring-sections' && isSpringSection) {
+          const headingText = springSectionTitle || '章节';
+          const sectionChildren = childrenArray;
+
+          let sectionLastElementIndex = -1;
+          for (let i = sectionChildren.length - 1; i >= 0; i--) {
+            if (React.isValidElement(sectionChildren[i])) {
+              sectionLastElementIndex = i;
+              break;
+            }
+          }
+
+          return (
+            <section style={{ margin: '28px 0 20px' }}>
+              <section
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginBottom: '8px',
+                }}
+              >
+                <section
+                  style={{
+                    backgroundImage: `url(${SPRING_DECORATIVE_ASSETS.titleBrush})`,
+                    backgroundSize: '100% 100%',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    padding: '11px 3em',
+                    boxSizing: 'border-box',
+                    minWidth: '190px',
+                    maxWidth: '90%',
+                  }}
+                >
+                  <section
+                    style={{
+                      fontSize: '20px',
+                      color: '#ffffff',
+                      textAlign: 'center',
+                      letterSpacing: '2px',
+                      fontWeight: 700,
+                      lineHeight: 1.3,
+                      fontFamily: fontStyleDef.headingFontFamily,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {headingText}
+                  </section>
+                </section>
+              </section>
+              <section
+                style={{
+                  position: 'relative',
+                  marginTop: '16px',
+                }}
+              >
+                <img
+                  src={SPRING_DECORATIVE_ASSETS.leafTopLeft}
+                  alt=""
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    left: '-18px',
+                    top: '-26px',
+                    width: '92px',
+                    opacity: 0.72,
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'relative',
+                    backgroundColor: '#f3faed',
+                    border: '1px solid #dbe8cc',
+                    padding: '22px 15px 18px',
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <section
+                    style={{
+                      width: 'calc(100% - 58px)',
+                      height: '1px',
+                      margin: '0 0 14px 58px',
+                      backgroundColor: config.primaryColor,
+                      opacity: 0.9,
+                    }}
+                  />
+                  <img
+                    src={SPRING_DECORATIVE_ASSETS.leafRight}
+                    alt=""
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      right: '-10px',
+                      bottom: '6px',
+                      width: '54px',
+                      opacity: 0.35,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <section style={{ position: 'relative', zIndex: 1 }}>
+                    {sectionChildren.map((child, index) => {
+                      if (index === sectionLastElementIndex && React.isValidElement(child)) {
+                        const element = child as React.ReactElement<any>;
+                        return React.cloneElement(element, {
+                          style: {
+                            ...(element.props.style || {}),
+                            marginBottom: 0,
+                          },
+                        });
+                      }
+                      return child;
+                    })}
+                  </section>
+                  <section
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      marginTop: '14px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <img
+                      src={SPRING_DECORATIVE_ASSETS.curveBottom}
+                      alt=""
+                      aria-hidden="true"
+                      style={{
+                        width: '84%',
+                        maxWidth: '680px',
+                        opacity: 0.9,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  </section>
+                </section>
+              </section>
+            </section>
+          );
+        }
+
         const blockquoteText = readNodeText(childrenArray).trim();
         const hasWarningTone = /(?:⚠️?|❗|警告|风险|注意)/u.test(blockquoteText);
         const hasCheckTone = /(?:✅|✔️?|建议|推荐)/u.test(blockquoteText);
@@ -648,6 +841,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           : {
             ...themeStyle.blockquote,
             ...(isInspirationTemplate ? inspirationQuoteStyle : {}),
+            ...(isSpringTemplateMode ? {
+              margin: '16px 0',
+              padding: '14px 16px',
+              borderRadius: '8px',
+              border: '1px solid #d9e8c7',
+              borderLeft: `3px solid ${hexToRgba(config.primaryColor, 0.65)}`,
+              background: '#f3faed',
+            } : {}),
             ...commonTextStyle,
             ...(isInspirationTemplate ? { lineHeight: 1.95 } : {}),
           };
@@ -838,10 +1039,31 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             >
               {/* 头部信息 */}
               <div className="px-5 pt-12 pb-2">
-                <h1 style={{ fontSize: '22px', fontWeight: 'bold', lineHeight: '1.4', color: '#333', marginBottom: '0.75em', letterSpacing: '0.025em' }}>
+                <h1
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: 'bold',
+                    lineHeight: '1.35',
+                    color: '#333',
+                    marginBottom: '0.75em',
+                    letterSpacing: '0.025em',
+                    textAlign: 'left',
+                    fontFamily: fontStyleDef.headingFontFamily,
+                  }}
+                >
                   {headerInfo.title}
                 </h1>
-                <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px', color: 'rgba(0,0,0,0.4)', marginBottom: '1.5em' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    flexWrap: 'wrap',
+                    fontSize: '14px',
+                    color: 'rgba(0,0,0,0.4)',
+                    marginBottom: '1.2em',
+                  }}
+                >
                   <span style={{ marginRight: '10px' }}>原创</span>
                   <span style={{ marginRight: '10px', color: '#576b95', fontWeight: '500' }}>{headerInfo.author}</span>
                   <span style={{ marginRight: '10px', color: '#576b95' }}>{headerInfo.account}</span>
