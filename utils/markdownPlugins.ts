@@ -354,3 +354,75 @@ export function remarkSpringSections() {
     tree.children = nextChildren;
   };
 }
+
+/**
+ * Remark 插件：招聘蓝调章节容器
+ * 把「二级标题 + 后续内容（直到下一个二级标题）」包装为主题容器，
+ * 渲染层据此绘制蓝色渐变标题条与黑色边框结构。
+ */
+export function remarkRecruitSections() {
+  const extractText = (node: any): string => {
+    if (!node) return '';
+    if (typeof node.value === 'string') return node.value;
+    if (Array.isArray(node.children)) {
+      return node.children.map((child: any) => extractText(child)).join('');
+    }
+    return '';
+  };
+
+  const normalizeTitle = (text: string): string => (
+    text
+      .replace(/^\s*(?:PART\.?\s*\d+|RECRUITMENT)\s*[、.．:：)\-]\s*/i, '')
+      .replace(/^\s*([0-9]+|[一二三四五六七八九十百零]+)\s*[、.．:：)\-]\s*/, '')
+      .trim()
+  );
+
+  const isSectionStart = (node: any): boolean => node?.type === 'heading' && node.depth === 2;
+  const toSectionIndex = (index: number): string => String(index).padStart(2, '0');
+
+  return (tree: any) => {
+    if (!tree || !Array.isArray(tree.children)) return;
+
+    const source = tree.children;
+    const nextChildren: any[] = [];
+    let i = 0;
+    let sectionIndex = 0;
+
+    while (i < source.length) {
+      const current = source[i];
+
+      if (isSectionStart(current)) {
+        sectionIndex += 1;
+        const rawTitle = extractText(current);
+        const sectionTitle = normalizeTitle(rawTitle) || rawTitle.trim() || `章节 ${sectionIndex}`;
+        const sectionChildren: any[] = [];
+
+        i += 1;
+        while (i < source.length) {
+          const candidate = source[i];
+          if (isSectionStart(candidate)) break;
+          sectionChildren.push(candidate);
+          i += 1;
+        }
+
+        nextChildren.push({
+          type: 'blockquote',
+          data: {
+            hProperties: {
+              'data-recruit-section': 'true',
+              'data-recruit-index': toSectionIndex(sectionIndex),
+              'data-recruit-title': sectionTitle,
+            },
+          },
+          children: sectionChildren,
+        });
+        continue;
+      }
+
+      nextChildren.push(current);
+      i += 1;
+    }
+
+    tree.children = nextChildren;
+  };
+}

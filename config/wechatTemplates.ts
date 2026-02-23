@@ -10,7 +10,11 @@ import {
   WeChatTypographyStyleKind,
 } from '../types';
 
-export type WeChatRemarkPluginKey = 'guobiCards' | 'inspirationSections' | 'springSections';
+export type WeChatRemarkPluginKey =
+  | 'guobiCards'
+  | 'inspirationSections'
+  | 'springSections'
+  | 'recruitSections';
 
 export interface WeChatTemplateRenderProfile {
   layoutMode: 'fixed';
@@ -37,7 +41,7 @@ export interface WeChatTemplateRenderProfile {
     itemMarginBottom: string;
   };
   blockquote: {
-    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections';
+    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections' | 'recruit-sections';
   };
 }
 
@@ -77,6 +81,11 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
     value: 'spring',
     label: '春序',
     summary: '清新绿色专题模板，突出分节与装饰细节。',
+  },
+  recruit: {
+    value: 'recruit',
+    label: '框线',
+    summary: '黑色框线与轻几何修饰，强调内容分区。',
   },
 };
 
@@ -191,6 +200,21 @@ const SPRING_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   typographyStyle: 'standard',
   fontStyle: 'standard',
   primaryColor: '#417505',
+  codeTheme: 'vsLight',
+  macCodeBlock: false,
+  lineNumbers: false,
+  linkReferences: false,
+  indent: false,
+  justify: true,
+  captionType: 'none',
+  fontSize: 'Small',
+  lineHeight: 'comfortable',
+};
+
+const RECRUIT_DEFAULTS: Omit<WeChatConfig, 'template'> = {
+  typographyStyle: 'standard',
+  fontStyle: 'standard',
+  primaryColor: '#7C9EE8',
   codeTheme: 'vsLight',
   macCodeBlock: false,
   lineNumbers: false,
@@ -378,11 +402,53 @@ const SPRING_RENDER: WeChatTemplateRenderProfile = {
   },
 };
 
+const RECRUIT_RENDER: WeChatTemplateRenderProfile = {
+  layoutMode: 'fixed',
+  fixedLayoutId: 'RecruitBlue',
+  titleBlockMode: 'header-only',
+  headingSizeMode: 'keep-layout-h2-h3',
+  remarkPluginKeys: ['recruitSections'],
+  commonText: {
+    letterSpacing: '0.08em',
+    color: '#2a2624',
+  },
+  image: {
+    sectionMargin: '14px 0',
+    wrapperRadius: '0',
+    style: {
+      maxWidth: '100%',
+      height: 'auto',
+      display: 'block',
+      margin: '0 auto',
+      borderRadius: '0',
+      border: '1px solid #000000',
+      boxSizing: 'border-box',
+    },
+  },
+  paragraph: {
+    style: {
+      color: '#2a2624',
+      lineHeight: '2.1',
+      letterSpacing: '0.08em',
+      margin: '10px 0',
+      minHeight: '1em',
+    },
+  },
+  list: {
+    blockMarginBottom: '14px',
+    itemMarginBottom: '0.45em',
+  },
+  blockquote: {
+    mode: 'recruit-sections',
+  },
+};
+
 const LEGACY_LAYOUT_TO_FONT_STYLE: Record<string, WeChatFontStyleKind> = {
   Base: 'standard',
   Classic: 'classic',
   Vibrant: 'vibrant',
   SpringFresh: 'standard',
+  RecruitBlue: 'standard',
   base: 'standard',
   classicLayout: 'classic',
   vibrantLayout: 'vibrant',
@@ -396,6 +462,7 @@ const LEGACY_LAYOUT_TO_TYPOGRAPHY_STYLE: Record<string, WeChatTypographyStyleKin
   Classic: 'classic',
   Vibrant: 'vibrant',
   SpringFresh: 'standard',
+  RecruitBlue: 'standard',
   base: 'standard',
   standard: 'standard',
   classic: 'classic',
@@ -433,6 +500,9 @@ const normalizeTemplateValue = (value: unknown): {
   }
   if (value === 'springFresh') {
     return { template: 'spring' };
+  }
+  if (value === 'recruitBlue') {
+    return { template: 'recruit' };
   }
   if (value === 'inspiration') {
     return { template: 'basic', forcedTypographyStyle: 'inspiration' };
@@ -498,6 +568,7 @@ export const getWeChatRenderProfile = (
 ): WeChatTemplateRenderProfile => {
   if (template === 'guobi') return GUOBI_RENDER;
   if (template === 'spring') return SPRING_RENDER;
+  if (template === 'recruit') return RECRUIT_RENDER;
   if (typographyStyle === 'classic') return BASIC_CLASSIC_RENDER;
   if (typographyStyle === 'vibrant') return BASIC_VIBRANT_RENDER;
   if (typographyStyle === 'inspiration') return BASIC_INSPIRATION_RENDER;
@@ -520,6 +591,14 @@ export const getWeChatTemplateDefaultConfig = (
     return {
       template,
       ...SPRING_DEFAULTS,
+      typographyStyle: 'standard',
+    };
+  }
+
+  if (template === 'recruit') {
+    return {
+      template,
+      ...RECRUIT_DEFAULTS,
       typographyStyle: 'standard',
     };
   }

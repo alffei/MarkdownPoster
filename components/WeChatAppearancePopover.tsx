@@ -70,6 +70,14 @@ const WeChatTemplateThumbnail: React.FC<{
       topBarClass: 'border-b border-[#d8e8c5]',
       topLabel: 'SPRING',
     },
+    recruit: {
+      frameClass: 'bg-[#f1f4fb]',
+      cardClass: 'bg-white border border-black',
+      titleClass: 'text-[#2a2624]',
+      accentColor: '#7C9EE8',
+      topBarClass: 'border-b border-black',
+      topLabel: '框线',
+    },
   };
   const visual = visualMap[template];
 

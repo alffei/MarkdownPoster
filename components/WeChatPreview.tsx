@@ -18,6 +18,7 @@ import {
   remarkCenter,
   remarkGuobiCards,
   remarkInspirationSections,
+  remarkRecruitSections,
   remarkSpringSections,
 } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
@@ -139,6 +140,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     const templateRemarkPlugins: Record<WeChatRemarkPluginKey, any> = {
       guobiCards: remarkGuobiCards,
       inspirationSections: remarkInspirationSections,
+      recruitSections: remarkRecruitSections,
       springSections: remarkSpringSections,
     };
     const plugins = [remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter];
@@ -198,6 +200,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   // 4) 自定义渲染器：确保和公众号显示习惯一致
   const components = useMemo(() => {
     const isInspirationTemplate = templateRender.blockquote.mode === 'inspiration-sections';
+    const isRecruitTemplateMode = templateRender.blockquote.mode === 'recruit-sections';
     const isSpringTemplateMode = templateRender.blockquote.mode === 'spring-sections';
     let inspirationCoverCount = 0;
 
@@ -556,6 +559,35 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </h3>
           );
         }
+        if (isRecruitTemplateMode) {
+          return (
+            <h3
+              style={{
+                ...themeStyle.h3,
+                fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                letterSpacing: '0.05em',
+                color: '#2a2624',
+                fontFamily: fontStyleDef.headingFontFamily,
+              }}
+            >
+              <span
+                style={{
+                  width: '9px',
+                  height: '9px',
+                  borderRadius: 0,
+                  background: `linear-gradient(135deg, ${config.primaryColor} 0%, ${hexToRgba(config.primaryColor, 0.55)} 100%)`,
+                  border: '1px solid #000000',
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
+              <span>{children}</span>
+            </h3>
+          );
+        }
         if (isSpringTemplateMode) {
           return (
             <h3
@@ -607,9 +639,18 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           (node as any)?.properties?.['data-spring-section'] ||
           (node as any)?.data?.hProperties?.['data-spring-section']
         );
+        const isRecruitSection = Boolean(
+          (node as any)?.properties?.['data-recruit-section'] ||
+          (node as any)?.data?.hProperties?.['data-recruit-section']
+        );
         const inspirationSectionIndex = String(
           (node as any)?.properties?.['data-inspiration-index'] ||
           (node as any)?.data?.hProperties?.['data-inspiration-index'] ||
+          ''
+        );
+        const recruitSectionTitle = String(
+          (node as any)?.properties?.['data-recruit-title'] ||
+          (node as any)?.data?.hProperties?.['data-recruit-title'] ||
           ''
         );
         const springSectionTitle = String(
@@ -667,6 +708,145 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 >
                   {headingText}
                 </h2>
+              </section>
+            </section>
+          );
+        }
+
+        if (templateRender.blockquote.mode === 'recruit-sections' && isRecruitSection) {
+          const headingText = recruitSectionTitle || '章节';
+          const sectionChildren = childrenArray;
+
+          let sectionLastElementIndex = -1;
+          for (let i = sectionChildren.length - 1; i >= 0; i--) {
+            if (React.isValidElement(sectionChildren[i])) {
+              sectionLastElementIndex = i;
+              break;
+            }
+          }
+
+          return (
+            <section style={{ margin: '26px 0 20px' }}>
+              <section
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginBottom: '12px',
+                }}
+              >
+                <section
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '0 30px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 'clamp(22px, 3.6vw, 30px)',
+                      lineHeight: 1.14,
+                      letterSpacing: '0.6px',
+                      color: '#000000',
+                      fontWeight: 700,
+                      fontFamily: fontStyleDef.headingFontFamily,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {headingText}
+                  </span>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '-10px',
+                      top: '4px',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '12px solid transparent',
+                      borderRight: '34px solid transparent',
+                      borderBottom: `16px solid ${hexToRgba(config.primaryColor, 0.72)}`,
+                      transform: 'rotate(-8deg)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </section>
+              </section>
+
+              <section
+                style={{
+                  position: 'relative',
+                  border: '1px solid #000000',
+                  backgroundColor: '#ffffff',
+                  overflow: 'hidden',
+                }}
+              >
+                <section
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    height: '34px',
+                    padding: '0 14px',
+                    borderBottom: '1px solid #000000',
+                    backgroundColor: '#ffffff',
+                  }}
+                >
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#000000' }} />
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#000000' }} />
+                </section>
+
+                <section
+                  style={{
+                    position: 'absolute',
+                    right: '-10px',
+                    top: '38px',
+                    width: '38px',
+                    height: '28px',
+                    background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.9)} 0%, ${config.primaryColor} 100%)`,
+                    transform: 'rotate(16deg)',
+                    boxShadow: `0 3px 8px ${hexToRgba(config.primaryColor, 0.26)}`,
+                    zIndex: 2,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '11px',
+                      top: '9px',
+                      width: '14px',
+                      height: '8px',
+                      borderLeft: '2px solid #fff',
+                      borderBottom: '2px solid #fff',
+                      transform: 'rotate(-35deg)',
+                    }}
+                  />
+                </section>
+
+                <section style={{ position: 'relative', zIndex: 1, padding: '16px 14px 16px' }}>
+                  {sectionChildren.map((child, index) => {
+                    if (index === sectionLastElementIndex && React.isValidElement(child)) {
+                      const element = child as React.ReactElement<any>;
+                      return React.cloneElement(element, {
+                        style: {
+                          ...(element.props.style || {}),
+                          marginBottom: 0,
+                        },
+                      });
+                    }
+                    return child;
+                  })}
+
+                  <section
+                    style={{
+                      marginTop: '14px',
+                      width: '100%',
+                      height: '12px',
+                      background: `linear-gradient(to right, ${hexToRgba(config.primaryColor, 0.85)} 0%, rgba(255,255,255,0.95) 100%)`,
+                    }}
+                  />
+                </section>
               </section>
             </section>
           );
@@ -849,6 +1029,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
               borderLeft: `3px solid ${hexToRgba(config.primaryColor, 0.65)}`,
               background: '#f3faed',
             } : {}),
+            ...(isRecruitTemplateMode ? {
+              margin: '16px 0',
+              padding: '14px 16px',
+              borderRadius: '0',
+              border: '1px solid #000000',
+              borderLeft: `3px solid ${config.primaryColor}`,
+              background: '#ffffff',
+            } : {}),
             ...commonTextStyle,
             ...(isInspirationTemplate ? { lineHeight: 1.95 } : {}),
           };
@@ -886,6 +1074,78 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         const listText = readNodeText(children).trim();
         const listMarker = parseInspirationMarker(listText);
         const isInspirationChecklist = isInspirationTemplate && !isTaskList && listMarker.kind === 'check';
+        if (isRecruitTemplateMode && !isTaskList) {
+          const items = React.Children.toArray(children).filter(
+            (item) => React.isValidElement(item) && item.type === 'li'
+          ) as React.ReactElement<any>[];
+          if (!items.length) {
+            return (
+              <ul
+                style={{
+                  listStyleType: 'none',
+                  paddingLeft: 0,
+                  marginBottom: templateRender.list.blockMarginBottom,
+                  marginTop: '2px',
+                }}
+              >
+                {children}
+              </ul>
+            );
+          }
+          return (
+            <ul
+              style={{
+                listStyleType: 'none',
+                paddingLeft: 0,
+                marginBottom: templateRender.list.blockMarginBottom,
+                marginTop: '2px',
+              }}
+            >
+              {items.map((item, index) => {
+                const key = item.key != null ? item.key : `recruit-ul-${index}`;
+                const content = item.props.children;
+                return (
+                  <li
+                    key={String(key)}
+                    style={{
+                      ...commonTextStyle,
+                      listStyleType: 'none',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      marginBottom: '0.9em',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        backgroundColor: '#000000',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: '0.32em',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '4px',
+                          height: '4px',
+                          borderRadius: '50%',
+                          backgroundColor: '#ffffff',
+                          display: 'block',
+                        }}
+                      />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>{content}</div>
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        }
         return (
           <ul style={{
             paddingLeft: isTaskList || isInspirationChecklist ? '0' : '1.5em',
@@ -906,7 +1166,77 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           </ul>
         );
       },
-      ol: ({ node, children }: any) => <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: (themeStyle.list as any).color }}>{children}</ol>,
+      ol: ({ node, children }: any) => {
+        if (isRecruitTemplateMode) {
+          const items = React.Children.toArray(children).filter(
+            (item) => React.isValidElement(item) && item.type === 'li'
+          ) as React.ReactElement<any>[];
+          if (!items.length) {
+            return <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: (themeStyle.list as any).color }}>{children}</ol>;
+          }
+          return (
+            <ol
+              style={{
+                listStyleType: 'none',
+                paddingLeft: 0,
+                marginBottom: templateRender.list.blockMarginBottom,
+                marginTop: '4px',
+              }}
+            >
+              {items.map((item, index) => {
+                const key = item.key != null ? item.key : `recruit-ol-${index}`;
+                const content = item.props.children;
+                const no = String(index + 1).padStart(2, '0');
+                return (
+                  <li
+                    key={String(key)}
+                    style={{
+                      listStyleType: 'none',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      marginBottom: '0.95em',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        border: '1px solid #000000',
+                        background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.92)} 0%, #fffdfc 100%)`,
+                        color: '#111111',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        lineHeight: 1,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        marginTop: '0.08em',
+                      }}
+                    >
+                      {no}
+                    </span>
+                    <div
+                      style={{
+                        ...commonTextStyle,
+                        flex: 1,
+                        minWidth: 0,
+                        paddingTop: '2px',
+                        borderBottom: `1px dashed ${hexToRgba(config.primaryColor, 0.35)}`,
+                        paddingBottom: '8px',
+                      }}
+                    >
+                      {content}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          );
+        }
+        return <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: (themeStyle.list as any).color }}>{children}</ol>;
+      },
       li: ({ node, className, children }: any) => {
         const isTaskList = className?.includes('task-list-item');
         const listText = readNodeText(children).trim();

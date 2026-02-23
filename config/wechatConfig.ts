@@ -286,6 +286,53 @@ layouts:
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------
+  # [RecruitBlue] 框线（模板结构样式，排版风格按钮仅影响字体）
+  # ----------------------------------------------------------------------------
+  - id: "RecruitBlue"
+    name: "框线"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.9em"
+        lineHeight: "1.35"
+        color: "#2a2624"
+      h2:
+        fontWeight: "bold"
+        marginTop: "1.6em"
+        marginBottom: "0.8em"
+        lineHeight: "1.4"
+        color: "#000000"
+        textAlign: "center"
+        letterSpacing: "1px"
+        fontSize: "20px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.65em"
+        lineHeight: "1.9"
+        fontSize: "16px"
+        color: "#2a2624"
+      list:
+        color: "#2a2624"
+      blockquote:
+        margin: "18px 0"
+        padding: "16px"
+        borderRadius: "0"
+        borderLeft: "3px solid #7c9ee8"
+        border: "1px solid #000000"
+        backgroundColor: "#ffffff"
+        color: "#2a2624"
+      link:
+        color: "#5f83d1"
+        fontWeight: "bold"
+        textDecoration: "none"
+      hr:
+        border: "0"
+        borderTop: "1px dashed #b8c8eb"
+        margin: "2em 0"
+
+  # ----------------------------------------------------------------------------
   # [Guobi] 果比（模板结构样式，排版风格按钮仅影响字体）
   # ----------------------------------------------------------------------------
   - id: "SpringFresh"

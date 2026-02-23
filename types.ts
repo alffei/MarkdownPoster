@@ -70,7 +70,7 @@ export enum WeChatTheme {
   Simple = 'Simple'
 }
 
-export type WeChatTemplateKind = 'basic' | 'guobi' | 'spring';
+export type WeChatTemplateKind = 'basic' | 'guobi' | 'spring' | 'recruit';
 export type WeChatTypographyStyleKind = 'standard' | 'classic' | 'vibrant' | 'inspiration';
 export type WeChatFontStyleKind = 'standard' | 'classic' | 'vibrant';
 
