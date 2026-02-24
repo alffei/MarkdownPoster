@@ -76,7 +76,7 @@ const WeChatTemplateThumbnail: React.FC<{
       titleClass: 'text-[#2a2624]',
       accentColor: '#6366f1',
       topBarClass: 'border-b border-black',
-      topLabel: '框线',
+      topLabel: 'FRAME',
     },
   };
   const visual = visualMap[template];
