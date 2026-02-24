@@ -17,6 +17,7 @@ import { RubyRender } from './RubyRender';
 import { HEADER_PRESETS } from '../config/headerPresets'; 
 import { DECOR_PRESETS } from '../config/decorPresets'; 
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
+import { safeMarkdownUrlTransform } from '../utils/security';
 
 const DEFAULT_POSTER_WIDTH = 640;
 const STORAGE_KEY_POSTER_IMAGE_DISPLAYS = 'markdown_poster_image_displays_v1';
@@ -844,7 +845,7 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                                         <ReactMarkdown 
                                             remarkPlugins={[remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter]}
                                             rehypePlugins={[rehypeKatex]}
-                                            urlTransform={(value) => value}
+                                            urlTransform={safeMarkdownUrlTransform}
                                             components={{
                                                 img: ({ node, ...props }) => {
                                                   const rawSrc = typeof props.src === 'string' ? props.src : '';

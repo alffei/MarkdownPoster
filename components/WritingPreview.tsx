@@ -15,6 +15,7 @@ import { remarkRuby, remarkCenter } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { ThemeRegistry } from '../utils/themeRegistry';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
+import { safeMarkdownUrlTransform } from '../utils/security';
 
 interface WritingPreviewProps {
   markdown: string;
@@ -71,7 +72,7 @@ export const WritingPreview: React.FC<WritingPreviewProps> = ({
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter]}
                 rehypePlugins={[rehypeKatex]}
-                urlTransform={(value) => value}
+                urlTransform={safeMarkdownUrlTransform}
                 components={{
                   img: (props) => <StableImage {...props} imagePool={imagePool} />,
                   a: ({ node, href, children, ...props }) => {

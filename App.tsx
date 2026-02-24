@@ -19,6 +19,8 @@ import { useProjectExport } from './hooks/useProjectExport';
 import { ThemeRegistry } from './utils/themeRegistry';
 import { repairMarkdownBlock } from './utils/markdownRepair';
 import { getDefaultWeChatConfig, normalizeWeChatConfig } from './config/wechatTemplates';
+// @ts-ignore
+import JSZip from 'jszip';
 
 // 本地存储键名
 const STORAGE_KEY_MARKDOWN = 'markdown_poster_draft';
@@ -47,6 +49,15 @@ const POEM_POSTER_WIDTH = 320;
 const MAX_IMPORT_CHARS = 120000;
 const MAX_IMPORT_BYTES = 200 * 1024;
 const IMPORT_PM_TIMEOUT_MS = 10000;
+const MAX_IMAGE_POOL_STORAGE_SIZE = Math.floor(4.8 * 1024 * 1024);
+
+type ZipImportResult = {
+  markdown: string;
+  imagePool: Record<string, string>;
+  importedImages: number;
+  missingImages: number;
+  skippedImages: number;
+};
 
 const decodeBase64UrlUtf8 = (encoded: string): string => {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
@@ -64,6 +75,185 @@ const isImportRoute = () => {
   if (typeof window === 'undefined') return false;
   const path = window.location.pathname.toLowerCase();
   return path === '/import' || path.endsWith('/import');
+};
+
+const blobToDataUrl = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const normalizeZipPath = (rawPath: string) => {
+  const normalized = rawPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  const segments = normalized.split('/');
+  const resolved: string[] = [];
+
+  for (const segment of segments) {
+    if (!segment || segment === '.') continue;
+    if (segment === '..') {
+      if (resolved.length > 0) resolved.pop();
+      continue;
+    }
+    resolved.push(segment);
+  }
+
+  return resolved.join('/');
+};
+
+const safeDecodeURIComponent = (input: string) => {
+  try {
+    return decodeURIComponent(input);
+  } catch {
+    return input;
+  }
+};
+
+const parseMarkdownImageTarget = (rawTarget: string) => {
+  const trimmed = rawTarget.trim();
+  if (!trimmed) {
+    return { actualUrl: '', titlePart: '' };
+  }
+
+  if (trimmed.startsWith('<')) {
+    const closeIndex = trimmed.indexOf('>');
+    if (closeIndex > 0) {
+      return {
+        actualUrl: trimmed.slice(1, closeIndex),
+        titlePart: trimmed.slice(closeIndex + 1) || ''
+      };
+    }
+  }
+
+  const match = trimmed.match(/^(\S+)(\s+["'].*["'])?$/);
+  if (!match) {
+    return { actualUrl: trimmed, titlePart: '' };
+  }
+
+  return {
+    actualUrl: match[1],
+    titlePart: match[2] || ''
+  };
+};
+
+const isExternalPath = (target: string) => {
+  return /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(target) || target.startsWith('//');
+};
+
+const resolveZipAssetPath = (rawPath: string, baseDir: string) => {
+  const trimmed = rawPath.trim();
+  if (!trimmed) return '';
+
+  const withoutSuffix = trimmed.split('#')[0].split('?')[0];
+  const joinedPath = withoutSuffix.startsWith('/')
+    ? withoutSuffix.slice(1)
+    : `${baseDir}${withoutSuffix}`;
+  return normalizeZipPath(joinedPath);
+};
+
+const findZipAssetEntry = (zip: any, resolvedPath: string) => {
+  const candidates = new Set<string>();
+  const normalized = normalizeZipPath(resolvedPath);
+  if (normalized) {
+    candidates.add(normalized);
+    candidates.add(safeDecodeURIComponent(normalized));
+    candidates.add(encodeURI(normalized));
+    candidates.add(normalized.replace(/ /g, '%20'));
+  }
+
+  for (const candidate of candidates) {
+    const entry = zip.file(candidate);
+    if (entry && !entry.dir) return entry;
+  }
+
+  return null;
+};
+
+const canFitImagePool = (pool: Record<string, string>) => {
+  try {
+    return JSON.stringify(pool).length <= MAX_IMAGE_POOL_STORAGE_SIZE;
+  } catch {
+    return false;
+  }
+};
+
+const importProjectZipFile = async (file: File): Promise<ZipImportResult> => {
+  const zip = await JSZip.loadAsync(file);
+  const markdownEntry =
+    zip.file(/^index\.md$/i)[0] ||
+    zip.file(/(^|\/)index\.md$/i)[0] ||
+    zip.file(/\.md$/i)[0];
+
+  if (!markdownEntry) {
+    throw new Error('ZIP_MISSING_MARKDOWN');
+  }
+
+  const originalMarkdown = await markdownEntry.async('text');
+  const baseDir = markdownEntry.name.includes('/')
+    ? markdownEntry.name.slice(0, markdownEntry.name.lastIndexOf('/') + 1)
+    : '';
+  const imageRegex = /!\[(.*?)\]\((.*?)\)/g;
+  const matches = [...originalMarkdown.matchAll(imageRegex)];
+
+  const importedImagePool: Record<string, string> = {};
+  const assetPathToImageId = new Map<string, string>();
+  const replacements = new Map<string, string>();
+  let missingImages = 0;
+  let skippedImages = 0;
+  let importedImages = 0;
+
+  for (const match of matches) {
+    const fullLinkContent = match[2];
+    if (replacements.has(fullLinkContent)) continue;
+
+    const { actualUrl, titlePart } = parseMarkdownImageTarget(fullLinkContent);
+    if (!actualUrl || isExternalPath(actualUrl) || actualUrl.startsWith('local://')) {
+      continue;
+    }
+
+    const resolvedPath = resolveZipAssetPath(actualUrl, baseDir);
+    if (!resolvedPath) continue;
+
+    let imageId = assetPathToImageId.get(resolvedPath);
+    if (!imageId) {
+      const zipEntry = findZipAssetEntry(zip, resolvedPath);
+      if (!zipEntry) {
+        missingImages += 1;
+        continue;
+      }
+
+      const blob = await zipEntry.async('blob');
+      const dataUrl = await blobToDataUrl(blob);
+      const nextImageId = `img_${Math.random().toString(36).slice(2, 11)}`;
+      const nextPool = { ...importedImagePool, [nextImageId]: dataUrl };
+      if (!canFitImagePool(nextPool)) {
+        skippedImages += 1;
+        continue;
+      }
+
+      importedImagePool[nextImageId] = dataUrl;
+      assetPathToImageId.set(resolvedPath, nextImageId);
+      imageId = nextImageId;
+      importedImages += 1;
+    }
+
+    replacements.set(fullLinkContent, `local://${imageId}${titlePart}`);
+  }
+
+  let convertedMarkdown = originalMarkdown;
+  replacements.forEach((newPath, oldContent) => {
+    convertedMarkdown = convertedMarkdown.split(`(${oldContent})`).join(`(${newPath})`);
+  });
+
+  return {
+    markdown: convertedMarkdown,
+    imagePool: importedImagePool,
+    importedImages,
+    missingImages,
+    skippedImages
+  };
 };
 
 type PosterTweaksSnapshot = {
@@ -747,7 +937,7 @@ export default function App() {
     const newPool = { ...imagePoolRef.current, [imgId]: dataUrl };
     try {
       const serialized = JSON.stringify(newPool);
-      if (serialized.length > 4.8 * 1024 * 1024) {
+      if (serialized.length > MAX_IMAGE_POOL_STORAGE_SIZE) {
         setRepairNotice({ message: '本地存储空间不足，无法保存插图', id: Date.now() });
         return null;
       }
@@ -1261,7 +1451,7 @@ export default function App() {
             const newPool = { ...prev, [imgId]: compressedDataUrl };
             try {
                 const testStr = JSON.stringify(newPool);
-                if (testStr.length > 4.8 * 1024 * 1024) { alert("本地存储空间即将耗尽，请先删除部分旧图片。"); return prev; }
+                if (testStr.length > MAX_IMAGE_POOL_STORAGE_SIZE) { alert("本地存储空间即将耗尽，请先删除部分旧图片。"); return prev; }
                 return newPool;
             } catch (e) { alert("本地存储空间不足，无法添加。"); return prev; }
         });
@@ -1304,14 +1494,36 @@ export default function App() {
     document.body.style.userSelect = 'none'; 
   }, []);
 
-  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => { if (typeof e.target?.result === 'string') updateMarkdownImmediate(e.target.result); };
-      reader.readAsText(file);
+    if (!file) {
+      event.target.value = '';
+      return;
     }
-    event.target.value = '';
+
+    try {
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.zip')) {
+        const imported = await importProjectZipFile(file);
+        setImagePool(imported.imagePool);
+        updateMarkdownImmediate(imported.markdown);
+
+        const detailChunks: string[] = [];
+        if (imported.missingImages > 0) detailChunks.push(`${imported.missingImages} 张图片未在压缩包中找到`);
+        if (imported.skippedImages > 0) detailChunks.push(`${imported.skippedImages} 张图片因本地存储空间不足被跳过`);
+        const detailText = detailChunks.length > 0 ? `；${detailChunks.join('，')}` : '';
+        setRepairNotice({ message: `已导入项目包（${imported.importedImages} 张图片）${detailText}`, id: Date.now() });
+        return;
+      }
+
+      const text = await file.text();
+      updateMarkdownImmediate(text);
+    } catch (error) {
+      console.error('Import file failed', error);
+      alert('导入失败，请确认文件内容或格式后重试。');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleResetClick = useCallback(() => setIsResetModalOpen(true), []);
@@ -1431,7 +1643,7 @@ export default function App() {
                     <div className={`w-px h-3 mx-1 transition-colors ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300'}`}></div>
                     <div className="flex items-center gap-3">
                         <label className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide cursor-pointer ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`}>
-                            <input type="file" accept=".md,.txt" onChange={handleFileImport} className="hidden" />
+                            <input type="file" accept=".md,.txt,.zip" onChange={handleFileImport} className="hidden" />
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg><span className="hidden xl:inline">导入</span>
                         </label>
                         <button type="button" onClick={handleResetClick} className={`p-1.5 rounded transition-colors flex-shrink-0 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide ${isDarkMode ? 'text-gray-500 hover:text-[#d4cfbf] hover:bg-[#3e4451]' : 'text-gray-500 hover:text-[#8b7e74] hover:bg-[#e0ded7]'}`} title="重置为初始内容"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg><span className="hidden xl:inline">重置</span></button>

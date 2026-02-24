@@ -23,6 +23,7 @@ import {
 } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
+import { safeMarkdownUrlTransform } from '../utils/security';
 import {
   getWeChatFontStyleDefinition,
   getWeChatRenderProfile,
@@ -1407,8 +1408,8 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   remarkPlugins={remarkPlugins}
                   rehypePlugins={[rehypeKatex]}
                   components={components}
-                  // 允许 local:// 协议，供 StableImage 访问本地缓存图
-                  urlTransform={(value) => value}
+                  // 允许 local:// 与 ruby:，并过滤 javascript: 等危险协议
+                  urlTransform={safeMarkdownUrlTransform}
                 >
                   {processedMarkdown}
                 </ReactMarkdown>
