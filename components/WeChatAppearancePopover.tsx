@@ -74,7 +74,7 @@ const WeChatTemplateThumbnail: React.FC<{
       frameClass: 'bg-[#f1f4fb]',
       cardClass: 'bg-white border border-black',
       titleClass: 'text-[#2a2624]',
-      accentColor: '#7C9EE8',
+      accentColor: '#6366f1',
       topBarClass: 'border-b border-black',
       topLabel: '框线',
     },

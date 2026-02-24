@@ -214,7 +214,7 @@ const SPRING_DEFAULTS: Omit<WeChatConfig, 'template'> = {
 const RECRUIT_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   typographyStyle: 'standard',
   fontStyle: 'standard',
-  primaryColor: '#7C9EE8',
+  primaryColor: '#6366f1',
   codeTheme: 'vsLight',
   macCodeBlock: false,
   lineNumbers: false,
