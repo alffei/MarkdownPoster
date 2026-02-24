@@ -11,6 +11,28 @@ export interface WeChatCopyResult {
   errors: string[];
 }
 
+const blobToDataUrl = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const shouldMirrorHttpImage = (src: string): boolean => {
+  try {
+    const url = new URL(src, window.location.href);
+    // 只中转同源资源（例如 /wechat-assets/... 的修饰图），避免把所有外链图都重复上传。
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.origin === window.location.origin
+    );
+  } catch {
+    return false;
+  }
+};
+
 const KATEX_STYLE_PROPS = [
   'display',
   'position',
@@ -191,12 +213,16 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
             else if (src.startsWith('blob:')) {
                 const response = await fetch(src);
                 const blob = await response.blob();
-                base64Data = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
+                base64Data = await blobToDataUrl(blob);
+            }
+            // 场景 C：同源静态资源（例如春序主题的修饰图），也需要中转成公网地址。
+            else if (shouldMirrorHttpImage(src)) {
+                const response = await fetch(src);
+                if (!response.ok) {
+                    throw new Error(`Fetch static image failed: ${response.status}`);
+                }
+                const blob = await response.blob();
+                base64Data = await blobToDataUrl(blob);
             }
 
             // 有可上传数据时才执行图床替换。
