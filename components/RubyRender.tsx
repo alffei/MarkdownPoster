@@ -12,6 +12,27 @@ interface RubyRenderProps {
 }
 
 export const RubyRender: React.FC<RubyRenderProps> = ({ baseText, reading, ...props }) => {
+    const rubyStyle: React.CSSProperties = {
+        margin: '0 2px',
+        display: 'inline',
+        whiteSpace: 'nowrap',
+        lineHeight: 1.1,
+        textAlign: 'left',
+        rubyAlign: 'start',
+        rubyPosition: 'over',
+        ...(props.style || {})
+    };
+    const rtStyle: React.CSSProperties = {
+        fontSize: '0.6em',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+        letterSpacing: 0
+    };
+    const rbStyle: React.CSSProperties = {
+        whiteSpace: 'nowrap',
+        letterSpacing: 0
+    };
+
     // 1) 注音分隔符：中点、全角点、句号、连字符
     // 对应字符编码：\u00B7(·), \uFF0E(．), \u3002(。)
     const separatorRegex = /[\u00B7\uFF0E\u3002\-]/;
@@ -24,11 +45,11 @@ export const RubyRender: React.FC<RubyRenderProps> = ({ baseText, reading, ...pr
 
     if (canMapOneToOne) {
         return (
-            <ruby {...props} style={{ margin: '0 2px' }}>
+            <ruby {...props} style={rubyStyle}>
                 {textContent.split('').map((char, index) => (
                     <React.Fragment key={index}>
-                        {char}
-                        <rt>{parts[index]}</rt>
+                        <rb style={rbStyle}>{char}</rb>
+                        <rt style={rtStyle}>{parts[index]}</rt>
                     </React.Fragment>
                 ))}
             </ruby>
@@ -37,9 +58,9 @@ export const RubyRender: React.FC<RubyRenderProps> = ({ baseText, reading, ...pr
 
     // 默认回退：整段注音覆盖整段正文
     return (
-        <ruby {...props} style={{ margin: '0 2px' }}>
+        <ruby {...props} style={rubyStyle}>
             {baseText}
-            <rt>{reading}</rt>
+            <rt style={rtStyle}>{reading}</rt>
         </ruby>
     );
 };

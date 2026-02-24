@@ -11,6 +11,148 @@ export interface WeChatCopyResult {
   errors: string[];
 }
 
+const KATEX_STYLE_PROPS = [
+  'display',
+  'position',
+  'top',
+  'right',
+  'bottom',
+  'left',
+  'float',
+  'clear',
+  'font-family',
+  'font-size',
+  'font-style',
+  'font-weight',
+  'line-height',
+  'letter-spacing',
+  'white-space',
+  'text-align',
+  'vertical-align',
+  'word-spacing',
+  'color',
+  'background-color',
+  'margin',
+  'margin-top',
+  'margin-right',
+  'margin-bottom',
+  'margin-left',
+  'padding',
+  'padding-top',
+  'padding-right',
+  'padding-bottom',
+  'padding-left',
+  'border',
+  'border-top',
+  'border-right',
+  'border-bottom',
+  'border-left',
+  'width',
+  'height',
+  'min-width',
+  'max-width',
+  'min-height',
+  'max-height',
+  'overflow',
+  'overflow-x',
+  'overflow-y',
+  'transform',
+  'transform-origin',
+] as const;
+
+const inlineComputedStyles = (source: HTMLElement, target: HTMLElement, properties: readonly string[]) => {
+  const computed = window.getComputedStyle(source);
+  properties.forEach((prop) => {
+    const value = computed.getPropertyValue(prop);
+    if (value) {
+      target.style.setProperty(prop, value);
+    }
+  });
+};
+
+const stabilizeKatexForWeChat = (sourceRoot: HTMLElement, exportRoot: HTMLElement) => {
+  const sourceKatexNodes = Array.from(sourceRoot.querySelectorAll<HTMLElement>('.katex, .katex *'));
+  const exportKatexNodes = Array.from(exportRoot.querySelectorAll<HTMLElement>('.katex, .katex *'));
+  const nodeCount = Math.min(sourceKatexNodes.length, exportKatexNodes.length);
+
+  for (let i = 0; i < nodeCount; i += 1) {
+    inlineComputedStyles(sourceKatexNodes[i], exportKatexNodes[i], KATEX_STYLE_PROPS);
+  }
+
+  // 微信端无 KaTeX CSS 时会把 MathML 兜底文本露出来，这里显式隐藏。
+  exportRoot.querySelectorAll<HTMLElement>('.katex-mathml').forEach((node) => {
+    node.style.setProperty('display', 'none');
+    node.style.setProperty('position', 'absolute');
+    node.style.setProperty('width', '1px');
+    node.style.setProperty('height', '1px');
+    node.style.setProperty('margin', '-1px');
+    node.style.setProperty('padding', '0');
+    node.style.setProperty('overflow', 'hidden');
+    node.style.setProperty('clip', 'rect(0, 0, 0, 0)');
+    node.style.setProperty('white-space', 'nowrap');
+    node.style.setProperty('border', '0');
+  });
+};
+
+const stabilizeRubyForWeChat = (exportRoot: HTMLElement) => {
+  const blockLevelTags = new Set(['P', 'LI', 'DIV', 'BLOCKQUOTE', 'TD', 'TH']);
+
+  exportRoot.querySelectorAll<HTMLElement>('ruby').forEach((node) => {
+    node.style.setProperty('display', 'inline');
+    node.style.setProperty('white-space', 'nowrap');
+    node.style.setProperty('line-height', node.style.lineHeight || '1.1');
+    node.style.setProperty('text-align', 'left');
+    node.style.setProperty('ruby-align', 'start');
+    node.style.setProperty('ruby-position', 'over');
+
+    // 公众号端在两端对齐时会把 ruby 内汉字撑开，含 ruby 的行改为左对齐。
+    let parent = node.parentElement as HTMLElement | null;
+    while (parent && parent !== exportRoot) {
+      if (blockLevelTags.has(parent.tagName)) {
+        parent.style.setProperty('text-align', 'left');
+        break;
+      }
+      parent = parent.parentElement as HTMLElement | null;
+    }
+  });
+
+  exportRoot.querySelectorAll<HTMLElement>('rb').forEach((node) => {
+    node.style.setProperty('white-space', 'nowrap');
+    node.style.setProperty('letter-spacing', '0');
+  });
+
+  exportRoot.querySelectorAll<HTMLElement>('rt').forEach((node) => {
+    node.style.setProperty('font-size', node.style.fontSize || '0.6em');
+    node.style.setProperty('line-height', '1');
+    node.style.setProperty('white-space', 'nowrap');
+    node.style.setProperty('letter-spacing', '0');
+  });
+};
+
+const stabilizeCodeBlocksForWeChat = (exportRoot: HTMLElement) => {
+  exportRoot.querySelectorAll<HTMLElement>('pre').forEach((preNode) => {
+    const parent = preNode.parentElement as HTMLElement | null;
+    if (!parent) return;
+
+    const currentPadding = preNode.style.padding || '';
+    if (currentPadding && currentPadding !== '0' && currentPadding !== '0px') return;
+
+    const parentPadding = parent.style.padding || '';
+    if (!parentPadding || parentPadding === '0' || parentPadding === '0px') return;
+
+    // 微信端可能丢失外层 div 的 padding，把内边距合并到 pre，确保代码块留白存在。
+    preNode.style.setProperty('padding', parentPadding);
+    preNode.style.setProperty('box-sizing', 'border-box');
+    parent.style.setProperty('padding', '0');
+  });
+};
+
+const preprocessWeChatClone = (sourceContentNode: HTMLElement, cloneNode: HTMLElement) => {
+  stabilizeKatexForWeChat(sourceContentNode, cloneNode);
+  stabilizeRubyForWeChat(cloneNode);
+  stabilizeCodeBlocksForWeChat(cloneNode);
+};
+
 /**
  * 公众号复制流程：
  * 1. 克隆预览 DOM，避免操作真实页面节点。
@@ -23,6 +165,7 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
 
     // 先克隆后处理，确保任何上传失败都不会影响当前预览状态。
     const clone = contentNode.cloneNode(true) as HTMLElement;
+    preprocessWeChatClone(contentNode as HTMLElement, clone);
 
     // 收集所有图片节点，后续统一并行处理。
     const images = Array.from(clone.querySelectorAll('img'));
