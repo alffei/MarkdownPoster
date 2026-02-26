@@ -2,15 +2,15 @@
  * 模块说明：默认示例内容常量，作为编辑器初始文案来源。
  */
 
-export const DEFAULT_MARKDOWN = `# Markdown 海报生成器
+export const DEFAULT_MARKDOWN = `# Markdown 生成器
 
 ![这是一张风景图片](https://picsum.photos/600/300 "这里是图片的标题说明")
 
-\`Markdown Poster\` 是一个工具，让你用 Markdown 制作优雅的图文海报。 ✨
+\`Markdown Poster\` 是一个工具，让你用 Markdown 制作优雅的图文内容。 ✨
 
 ## 它的主要功能：
 
-1. 将 *Markdown* 转化为 **图文海报**
+1. 将 *Markdown* 转化为 **图文内容**
 2. 可以 **自定义**
    - [x] 文本主题背景
    - [x] 字体大小

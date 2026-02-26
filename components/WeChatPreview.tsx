@@ -192,7 +192,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
       headerInfo: {
         title: extractedTitle,
         date: new Date().toLocaleDateString('zh-CN'),
-        author: "人人智学社",
+        author: "公众号",
         account: "人人智学社"
       }
     };

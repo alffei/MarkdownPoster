@@ -187,3 +187,8 @@ rt {
 .prose .center-aligned-block > :last-child {
   margin-bottom: 0;
 }
+
+/* Poster mode: loosen multi-line title rhythm */
+#poster-node .prose h1 {
+  line-height: 1.32;
+}
