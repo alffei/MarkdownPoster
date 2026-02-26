@@ -286,6 +286,53 @@ layouts:
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------
+  # [EditorialWeChat] 专栏
+  # ----------------------------------------------------------------------------
+  - id: "EditorialWeChat"
+    name: "专栏"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.1em"
+        marginBottom: "0.85em"
+        lineHeight: "1.45"
+        color: "#3B3B38"
+        letterSpacing: "2px"
+      h2:
+        fontWeight: "bold"
+        marginTop: "30px"
+        marginBottom: "14px"
+        lineHeight: "1.4"
+        color: "#8F2422"
+        letterSpacing: "2px"
+        fontSize: "30px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "24px"
+        marginBottom: "10px"
+        lineHeight: "1.8"
+        color: "#CC7C5B"
+        letterSpacing: "2px"
+        fontSize: "20px"
+      list:
+        color: "#3B3B38"
+      blockquote:
+        margin: "12px 0"
+        padding: "15px 12px"
+        borderRadius: "10px"
+        borderLeft: "7px solid rgba(228, 177, 160, 1)"
+        backgroundColor: "rgba(255, 255, 255, 0.6)"
+        color: "#3B3B38"
+      link:
+        color: "#336df4"
+        fontWeight: "bold"
+        textDecoration: "none"
+      hr:
+        border: "0"
+        borderTop: "1px solid #D97757"
+        margin: "24px 0"
+
+  # ----------------------------------------------------------------------------
   # [RecruitBlue] 框线（模板结构样式，排版风格按钮仅影响字体）
   # ----------------------------------------------------------------------------
   - id: "RecruitBlue"

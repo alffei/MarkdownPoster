@@ -71,7 +71,7 @@ export enum WeChatTheme {
 }
 
 export type WeChatTemplateKind = 'basic' | 'guobi' | 'spring' | 'recruit';
-export type WeChatTypographyStyleKind = 'standard' | 'classic' | 'vibrant' | 'inspiration';
+export type WeChatTypographyStyleKind = 'standard' | 'classic' | 'vibrant' | 'inspiration' | 'editorial';
 export type WeChatFontStyleKind = 'standard' | 'classic' | 'vibrant';
 
 export interface WeChatConfig {

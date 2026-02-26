@@ -203,6 +203,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     const isInspirationTemplate = templateRender.blockquote.mode === 'inspiration-sections';
     const isRecruitTemplateMode = templateRender.blockquote.mode === 'recruit-sections';
     const isSpringTemplateMode = templateRender.blockquote.mode === 'spring-sections';
+    const isEditorialTemplate = templateRender.blockquote.mode === 'editorial-accent';
     let inspirationCoverCount = 0;
 
     return {
@@ -527,8 +528,55 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         }
         return <h1 style={{ ...themeStyle.h1, fontSize: headingSizes.h1, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h1>;
       },
-      h2: ({ node, children }: any) => <h2 style={{ ...themeStyle.h2, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h2 as any).fontSize || '16px') : headingSizes.h2, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h2>,
+      h2: ({ node, children }: any) => {
+        if (isEditorialTemplate) {
+          return (
+            <h2
+              style={{
+                ...themeStyle.h2,
+                margin: '30px 0 14px',
+                borderBottom: `1px solid ${config.primaryColor}`,
+                paddingBottom: '8px',
+                color: (themeStyle.h2 as any)?.color || '#8F2422',
+                letterSpacing: '2px',
+                fontFamily: fontStyleDef.headingFontFamily,
+              }}
+            >
+              {children}
+            </h2>
+          );
+        }
+        return (
+          <h2
+            style={{
+              ...themeStyle.h2,
+              fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h2 as any).fontSize || '16px') : headingSizes.h2,
+              fontFamily: fontStyleDef.headingFontFamily,
+            }}
+          >
+            {children}
+          </h2>
+        );
+      },
       h3: ({ node, children }: any) => {
+        if (isEditorialTemplate) {
+          return (
+            <h3
+              style={{
+                ...themeStyle.h3,
+                marginTop: '22px',
+                marginBottom: '10px',
+                color: '#CC7C5B',
+                letterSpacing: '2px',
+                fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '20px') : headingSizes.h3,
+                fontWeight: 700,
+                fontFamily: fontStyleDef.headingFontFamily,
+              }}
+            >
+              {children}
+            </h3>
+          );
+        }
         if (isInspirationTemplate) {
           return (
             <h3
@@ -1022,6 +1070,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           : {
             ...themeStyle.blockquote,
             ...(isInspirationTemplate ? inspirationQuoteStyle : {}),
+            ...(isEditorialTemplate ? {
+              margin: '12px 0',
+              padding: '15px 12px',
+              borderLeft: '7px solid rgba(228, 177, 160, 1)',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              color: '#3B3B38',
+            } : {}),
             ...(isSpringTemplateMode ? {
               margin: '16px 0',
               padding: '14px 16px',
@@ -1040,6 +1096,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             } : {}),
             ...commonTextStyle,
             ...(isInspirationTemplate ? { lineHeight: 1.95 } : {}),
+            ...(isEditorialTemplate ? { lineHeight: 2, letterSpacing: '2px' } : {}),
           };
 
         // 找到最后一个有效元素节点，避免空白文本干扰
@@ -1075,6 +1132,65 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         const listText = readNodeText(children).trim();
         const listMarker = parseInspirationMarker(listText);
         const isInspirationChecklist = isInspirationTemplate && !isTaskList && listMarker.kind === 'check';
+        if (isEditorialTemplate && !isTaskList) {
+          const items = React.Children.toArray(children).filter(
+            (item) => React.isValidElement(item) && item.type === 'li'
+          ) as React.ReactElement<any>[];
+          if (!items.length) {
+            return (
+              <ul
+                style={{
+                  listStyleType: 'disc',
+                  paddingLeft: '1.4em',
+                  marginBottom: templateRender.list.blockMarginBottom,
+                  color: '#3B3B38',
+                }}
+              >
+                {children}
+              </ul>
+            );
+          }
+          return (
+            <ul
+              style={{
+                listStyleType: 'none',
+                paddingLeft: 0,
+                marginBottom: templateRender.list.blockMarginBottom,
+              }}
+            >
+              {items.map((item, index) => {
+                const key = item.key != null ? item.key : `editorial-ul-${index}`;
+                return (
+                  <li
+                    key={String(key)}
+                    style={{
+                      ...commonTextStyle,
+                      color: '#3B3B38',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      marginBottom: '0.8em',
+                      listStyleType: 'none',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: config.primaryColor,
+                        marginTop: '0.72em',
+                        flexShrink: 0,
+                        boxShadow: `0 0 0 3px ${hexToRgba(config.primaryColor, 0.12)}`,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>{item.props.children}</div>
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        }
         if (isRecruitTemplateMode && !isTaskList) {
           const items = React.Children.toArray(children).filter(
             (item) => React.isValidElement(item) && item.type === 'li'
@@ -1168,6 +1284,60 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         );
       },
       ol: ({ node, children }: any) => {
+        if (isEditorialTemplate) {
+          const items = React.Children.toArray(children).filter(
+            (item) => React.isValidElement(item) && item.type === 'li'
+          ) as React.ReactElement<any>[];
+          if (!items.length) {
+            return (
+              <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: '#3B3B38' }}>
+                {children}
+              </ol>
+            );
+          }
+          return (
+            <ol
+              style={{
+                listStyleType: 'none',
+                paddingLeft: 0,
+                marginBottom: templateRender.list.blockMarginBottom,
+              }}
+            >
+              {items.map((item, index) => {
+                const key = item.key != null ? item.key : `editorial-ol-${index}`;
+                const marker = `${index + 1}.`;
+                return (
+                  <li
+                    key={String(key)}
+                    style={{
+                      ...commonTextStyle,
+                      listStyleType: 'none',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      marginBottom: '0.95em',
+                      color: '#3B3B38',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: config.primaryColor,
+                        minWidth: '1.6em',
+                        display: 'inline-block',
+                        fontWeight: 700,
+                        lineHeight: 2,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {marker}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>{item.props.children}</div>
+                  </li>
+                );
+              })}
+            </ol>
+          );
+        }
         if (isRecruitTemplateMode) {
           const items = React.Children.toArray(children).filter(
             (item) => React.isValidElement(item) && item.type === 'li'
@@ -1299,11 +1469,27 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             paddingLeft: isTaskList ? '0' : '0.2em',
             listStyleType: isTaskList ? 'none' : 'inherit',
             display: isTaskList ? 'flex' : 'list-item', // 任务列表用 flex 以对齐复选框
-            alignItems: isTaskList ? 'flex-start' : undefined
+            alignItems: isTaskList ? 'flex-start' : undefined,
+            ...(isEditorialTemplate ? { color: '#3B3B38' } : {})
           }}>
             {children}
           </li>
         );
+      },
+      strong: ({ node, children }: any) => {
+        if (isEditorialTemplate) {
+          return (
+            <strong
+              style={{
+                color: '#CC7C5B',
+                fontWeight: 700,
+              }}
+            >
+              {children}
+            </strong>
+          );
+        }
+        return <strong>{children}</strong>;
       },
       a: ({ node, href, children }: any) => {
         // 拦截 ruby: 链接，交给注音渲染组件

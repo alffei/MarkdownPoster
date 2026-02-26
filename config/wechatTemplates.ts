@@ -41,7 +41,7 @@ export interface WeChatTemplateRenderProfile {
     itemMarginBottom: string;
   };
   blockquote: {
-    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections' | 'recruit-sections';
+    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections' | 'recruit-sections' | 'editorial-accent';
   };
 }
 
@@ -110,6 +110,11 @@ const TYPOGRAPHY_STYLE_MAP: Record<WeChatTypographyStyleKind, WeChatTypographySt
     label: '灵感',
     summary: '增强标题封面与章节信息卡。',
   },
+  editorial: {
+    value: 'editorial',
+    label: '专栏',
+    summary: '暖色刊物风，强调标题、序号与引用卡片。',
+  },
 };
 
 const FONT_STYLE_MAP: Record<WeChatFontStyleKind, WeChatFontStyleDefinition> = {
@@ -159,6 +164,21 @@ const BASIC_INSPIRATION_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   fontStyle: 'standard',
   primaryColor: '#D97706',
   codeTheme: 'vsDark',
+  macCodeBlock: false,
+  lineNumbers: false,
+  linkReferences: false,
+  indent: false,
+  justify: false,
+  captionType: 'none',
+  fontSize: 'Medium',
+  lineHeight: 'comfortable',
+};
+
+const BASIC_EDITORIAL_DEFAULTS: Omit<WeChatConfig, 'template'> = {
+  typographyStyle: 'editorial',
+  fontStyle: 'standard',
+  primaryColor: '#D97757',
+  codeTheme: 'vsLight',
   macCodeBlock: false,
   lineNumbers: false,
   linkReferences: false,
@@ -298,6 +318,46 @@ const BASIC_INSPIRATION_RENDER: WeChatTemplateRenderProfile = {
   },
   blockquote: {
     mode: 'inspiration-sections',
+  },
+};
+
+const BASIC_EDITORIAL_RENDER: WeChatTemplateRenderProfile = {
+  layoutMode: 'fixed',
+  fixedLayoutId: 'EditorialWeChat',
+  titleBlockMode: 'header-only',
+  headingSizeMode: 'keep-layout-h2-h3',
+  remarkPluginKeys: [],
+  commonText: {
+    letterSpacing: '2px',
+    color: '#515151',
+  },
+  image: {
+    sectionMargin: '16px 0',
+    wrapperRadius: '10px',
+    style: {
+      maxWidth: '100%',
+      height: 'auto',
+      display: 'block',
+      margin: '0 auto',
+      borderRadius: '10px',
+      border: '1px solid rgba(250, 249, 245, 1)',
+      boxSizing: 'border-box',
+    },
+  },
+  paragraph: {
+    style: {
+      lineHeight: '2',
+      margin: '20px 0',
+    },
+    marginBottom: '20px',
+    minHeight: '20px',
+  },
+  list: {
+    blockMarginBottom: '18px',
+    itemMarginBottom: '0.85em',
+  },
+  blockquote: {
+    mode: 'editorial-accent',
   },
 };
 
@@ -461,12 +521,14 @@ const LEGACY_LAYOUT_TO_TYPOGRAPHY_STYLE: Record<string, WeChatTypographyStyleKin
   Base: 'standard',
   Classic: 'classic',
   Vibrant: 'vibrant',
+  EditorialWeChat: 'editorial',
   SpringFresh: 'standard',
   RecruitBlue: 'standard',
   base: 'standard',
   standard: 'standard',
   classic: 'classic',
   vibrant: 'vibrant',
+  editorial: 'editorial',
 };
 
 const BASIC_DEFAULTS_BY_STYLE: Record<WeChatTypographyStyleKind, Omit<WeChatConfig, 'template'>> = {
@@ -474,6 +536,7 @@ const BASIC_DEFAULTS_BY_STYLE: Record<WeChatTypographyStyleKind, Omit<WeChatConf
   classic: BASIC_CLASSIC_DEFAULTS,
   vibrant: BASIC_VIBRANT_DEFAULTS,
   inspiration: BASIC_INSPIRATION_DEFAULTS,
+  editorial: BASIC_EDITORIAL_DEFAULTS,
 };
 
 const isWeChatTemplateKind = (value: unknown): value is WeChatTemplateKind => (
@@ -506,6 +569,9 @@ const normalizeTemplateValue = (value: unknown): {
   }
   if (value === 'inspiration') {
     return { template: 'basic', forcedTypographyStyle: 'inspiration' };
+  }
+  if (value === 'editorial') {
+    return { template: 'basic', forcedTypographyStyle: 'editorial' };
   }
   if (isWeChatTemplateKind(value)) {
     return { template: value };
@@ -572,6 +638,7 @@ export const getWeChatRenderProfile = (
   if (typographyStyle === 'classic') return BASIC_CLASSIC_RENDER;
   if (typographyStyle === 'vibrant') return BASIC_VIBRANT_RENDER;
   if (typographyStyle === 'inspiration') return BASIC_INSPIRATION_RENDER;
+  if (typographyStyle === 'editorial') return BASIC_EDITORIAL_RENDER;
   return BASIC_STANDARD_RENDER;
 };
 
