@@ -60,6 +60,11 @@ type ZipImportResult = {
   skippedImages: number;
 };
 
+type EditorViewportSnapshot = {
+  scrollTop: number;
+  scrollLeft: number;
+};
+
 const decodeBase64UrlUtf8 = (encoded: string): string => {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -845,10 +850,29 @@ export default function App() {
     }
   }, [history, historyIndex]);
 
+  const captureEditorViewportSnapshot = (textarea: HTMLTextAreaElement | null = textareaRef.current): EditorViewportSnapshot | null => {
+    if (!textarea) return null;
+    return {
+      scrollTop: textarea.scrollTop,
+      scrollLeft: textarea.scrollLeft,
+    };
+  };
+
+  const restoreEditorViewportSnapshot = (
+    snapshot: EditorViewportSnapshot | null,
+    textarea: HTMLTextAreaElement | null = textareaRef.current
+  ) => {
+    if (!snapshot || !textarea) return;
+    textarea.scrollTop = snapshot.scrollTop;
+    textarea.scrollLeft = snapshot.scrollLeft;
+  };
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
+    const viewportSnapshot = captureEditorViewportSnapshot(e.target);
     syncLiveEditorSelection(e.target);
     setMarkdown(newText);
+    requestAnimationFrame(() => restoreEditorViewportSnapshot(viewportSnapshot));
     // 输入过程做防抖，避免每个按键都写入历史栈导致撤销粒度过碎。
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
@@ -861,9 +885,13 @@ export default function App() {
   };
 
   const updateMarkdownImmediate = (newText: string) => {
+    const viewportSnapshot = captureEditorViewportSnapshot();
     setMarkdown(newText);
     pushToHistory(newText);
-    requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+      restoreEditorViewportSnapshot(viewportSnapshot);
+    });
   };
 
   const cleanupImportAddress = useCallback(() => {
@@ -1069,11 +1097,13 @@ export default function App() {
       newSelectionEnd = newText.length;
     }
 
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newText);
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.focus({ preventScroll: true });
         textareaRef.current.setSelectionRange(newSelectionStart, newSelectionEnd);
+        restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
         syncLiveEditorSelection(textareaRef.current);
       }
     });
@@ -1296,11 +1326,13 @@ export default function App() {
     const currentText = textarea.value;
     const newText = currentText.substring(0, start) + textToInsert + currentText.substring(end);
     const newCursorPos = start + textToInsert.length;
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newText);
     requestAnimationFrame(() => {
         if (textareaRef.current) {
             textareaRef.current.focus({ preventScroll: true });
             textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
             syncLiveEditorSelection(textareaRef.current);
         }
     });
@@ -1338,8 +1370,14 @@ export default function App() {
         newCursorPosStart = start + prefix.length;
         newCursorPosEnd = newCursorPosStart + (placeholder.length > 0 ? placeholder.length : 0);
     }
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newText);
-    requestAnimationFrame(() => textareaRef.current?.setSelectionRange(newCursorPosStart, newCursorPosEnd));
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(newCursorPosStart, newCursorPosEnd);
+        restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
+      }
+    });
   };
 
   // 获取选区覆盖的完整行范围
@@ -1387,6 +1425,7 @@ export default function App() {
     // 3) 更新文本
     const newValue = value.substring(0, lineStart) + newContent + value.substring(lineEnd);
     
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newValue);
 
     // 4) 恢复选区，覆盖变更后的整块
@@ -1395,6 +1434,7 @@ export default function App() {
         if (textareaRef.current) {
             textareaRef.current.focus({ preventScroll: true });
             textareaRef.current.setSelectionRange(lineStart, newSelectionEnd);
+            restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
         }
     });
   };
@@ -1466,11 +1506,13 @@ export default function App() {
 
     const newValue = value.substring(0, lineStart) + newContent + value.substring(lineEnd);
 
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newValue);
     requestAnimationFrame(() => {
         if (textareaRef.current) {
             textareaRef.current.focus({ preventScroll: true });
             textareaRef.current.setSelectionRange(lineStart, lineStart + newContent.length);
+            restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
         }
     });
   };
@@ -1505,11 +1547,13 @@ export default function App() {
     const nextSelectionStart = adjustPosition(selectionStart);
     const nextSelectionEnd = adjustPosition(selectionEnd);
 
+    const viewportSnapshot = captureEditorViewportSnapshot(textarea);
     updateMarkdownImmediate(newValue);
     requestAnimationFrame(() => {
       if (textareaRef.current) {
         textareaRef.current.focus({ preventScroll: true });
         textareaRef.current.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+        restoreEditorViewportSnapshot(viewportSnapshot, textareaRef.current);
       }
     });
     const changeCount = changes > 0 ? changes : 1;
@@ -1929,7 +1973,7 @@ export default function App() {
         {/* 中间拖拽分割条 */}
         <div
           className={`h-full z-20 flex items-center justify-center group flex-shrink-0 select-none relative transition-all duration-300 ${
-            isEditorCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-6 -ml-3 cursor-col-resize opacity-100'
+            isEditorCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-6 cursor-col-resize opacity-100'
           }`}
           onMouseDown={startResizing}
           title="拖动调整宽度"
