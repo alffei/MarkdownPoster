@@ -5,6 +5,7 @@
 import React, { useState, RefObject } from 'react';
 import { toPng, toBlob } from 'html-to-image';
 import { cleanImagePool } from '../utils/imageUtils';
+import { buildExportFilename } from '../utils/exportFilenames';
 
 interface UsePosterExportProps {
   exportRef: RefObject<HTMLDivElement | null>;
@@ -54,7 +55,7 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
             }
         });
         const link = document.createElement('a');
-        link.download = `markdownposter-${Date.now()}.png`;
+        link.download = buildExportFilename(markdown, '.png');
         link.href = dataUrl;
         link.click();
     } catch (e) {

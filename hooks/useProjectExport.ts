@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { getCorsFriendlyUrl, getExtensionFromMime, dataURItoBlob } from '../utils/imageUtils';
+import { buildExportFilename } from '../utils/exportFilenames';
 // @ts-ignore
 import JSZip from 'jszip';
 // @ts-ignore
@@ -22,7 +23,7 @@ export const useProjectExport = ({ markdown, imagePool }: UseProjectExportProps)
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `markdown-${Date.now()}.md`;
+    link.download = buildExportFilename(markdown, '.md');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -103,7 +104,7 @@ export const useProjectExport = ({ markdown, imagePool }: UseProjectExportProps)
         zip.file("index.md", processedMarkdown);
         const content = await zip.generateAsync({ type: "blob" });
         const saveAs = (FileSaver as any).saveAs || FileSaver;
-        saveAs(content, `markdown-project-${Date.now()}.zip`);
+        saveAs(content, buildExportFilename(markdown, '.zip'));
 
     } catch (e) {
         console.error("Export Zip Failed", e);
