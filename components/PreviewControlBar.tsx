@@ -67,6 +67,26 @@ interface NotificationState {
   details?: string[];
 }
 
+const buildWeChatDiagnosticDetails = (result: WeChatCopyResult): string[] => {
+  const details = [
+    `图片总数：${result.totalImages} 张`,
+    `尝试上传图床：${result.attemptedUploads} 张`,
+    `上传成功：${result.uploadedImages} 张`,
+    `上传失败：${result.failedImages} 张`,
+    `保留原始地址：${result.passthroughImages} 张`,
+  ];
+
+  if (result.passthroughImages > 0) {
+    details.push('保留原始地址的图片不会走图床；如果公众号后台抓不到该外链，粘贴后会不显示。');
+  }
+
+  if (result.failedImages > 0) {
+    details.push('上传失败的图片会保留原始地址；如果原地址不是公众号可访问公网图，粘贴后大概率不显示。');
+  }
+
+  return details.concat(result.errors);
+};
+
 export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({ 
   currentTheme, 
   setTheme, 
@@ -125,7 +145,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
     if (notification && notification.type === 'success') {
       const timer = setTimeout(() => {
         setNotification(null);
-      }, 3000);
+      }, notification.details && notification.details.length > 0 ? 6000 : 3000);
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -140,32 +160,37 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
     // 返回空值代表流程提前取消或早期失败
     if (!result) return;
 
+    const diagnosticDetails = buildWeChatDiagnosticDetails(result);
+
     if (result.success) {
        setNotification({
          type: 'success',
-         message: '复制成功！可直接粘贴到微信后台。'
+         message: result.totalImages > 0
+           ? `复制成功：共处理 ${result.totalImages} 张图片，上传成功 ${result.uploadedImages} 张。`
+           : '复制成功！当前内容没有图片。',
+         details: diagnosticDetails
        });
     } else {
        if (result.failedImages > 0 && result.totalImages > result.failedImages) {
           // 部分成功：正文复制成功，但部分图片上传失败
           setNotification({
              type: 'warning',
-             message: `复制成功，但有 ${result.failedImages} 张图片上传失败。`,
-             details: result.errors
+             message: `复制成功，但有 ${result.failedImages} 张图片上传失败，成功 ${result.uploadedImages} 张。`,
+             details: diagnosticDetails
           });
        } else if (result.failedImages > 0 && result.failedImages === result.totalImages) {
           // 图片全部失败：正文已复制，但图片均上传失败
            setNotification({
              type: 'error',
-             message: `复制成功，但所有图片 (${result.failedImages}张) 均上传失败。`,
-             details: result.errors
+             message: `复制成功，但尝试上传的图片全部失败（${result.failedImages} 张）。`,
+             details: diagnosticDetails
           });
        } else {
           // 兜底错误
            setNotification({
              type: 'error',
-             message: '复制过程中发生未知错误。',
-             details: result.errors
+             message: '复制过程中发生异常，图片处理未完整完成。',
+             details: diagnosticDetails
           });
        }
     }
@@ -506,12 +531,12 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                     <div className="flex-1">
                         <p className="text-xs font-bold leading-tight mb-1">{notification.message}</p>
                         {notification.details && notification.details.length > 0 && (
-                            <ul className="mt-2 pl-3 list-disc text-[10px] opacity-80 space-y-1 max-h-24 overflow-y-auto">
-                                {notification.details.slice(0, 3).map((err, idx) => (
+                            <ul className="mt-2 pl-3 list-disc text-[10px] opacity-80 space-y-1 max-h-32 overflow-y-auto">
+                                {notification.details.slice(0, 6).map((err, idx) => (
                                     <li key={idx} className="break-all">{err}</li>
                                 ))}
-                                {notification.details.length > 3 && (
-                                    <li>...还有 {notification.details.length - 3} 个错误</li>
+                                {notification.details.length > 6 && (
+                                    <li>...还有 {notification.details.length - 6} 条详情</li>
                                 )}
                             </ul>
                         )}

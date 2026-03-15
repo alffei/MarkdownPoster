@@ -140,6 +140,7 @@ export const StableImage: React.FC<StableImageProps> = ({
       src={blobSrc || ""} 
       alt={alt} 
       {...props} 
+      data-mp-original-src={typeof src === 'string' ? src : ''}
       data-mp-image-key={imageKey}
       draggable={false}
       className={className || computedClassName}

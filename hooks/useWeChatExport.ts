@@ -26,7 +26,10 @@ export const useWeChatExport = ({ weChatRef }: UseWeChatExportProps) => {
         return {
             success: false,
             totalImages: 0,
+            attemptedUploads: 0,
+            uploadedImages: 0,
             failedImages: 0,
+            passthroughImages: 0,
             errors: [(e as any).message || 'Unknown error']
         };
     } finally {

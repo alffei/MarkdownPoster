@@ -7,17 +7,63 @@ import { uploadToImgbb } from '../services/imgbbService';
 export interface WeChatCopyResult {
   success: boolean;
   totalImages: number;
+  attemptedUploads: number;
+  uploadedImages: number;
   failedImages: number;
+  passthroughImages: number;
   errors: string[];
 }
 
-const blobToDataUrl = (blob: Blob): Promise<string> => {
+const waitForImageReady = (img: HTMLImageElement): Promise<void> => {
+  if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+    return Promise.resolve();
+  }
+
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
+    const handleLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error('Image failed to load'));
+    };
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Image load timed out'));
+    }, 10000);
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+    };
+
+    img.addEventListener('load', handleLoad, { once: true });
+    img.addEventListener('error', handleError, { once: true });
   });
+};
+
+const imageElementToDataUrl = async (img: HTMLImageElement): Promise<string> => {
+  await waitForImageReady(img);
+
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  if (!width || !height) {
+    throw new Error('Image size unavailable');
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas context unavailable');
+  }
+
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/png');
 };
 
 const shouldMirrorHttpImage = (src: string): boolean => {
@@ -31,6 +77,11 @@ const shouldMirrorHttpImage = (src: string): boolean => {
   } catch {
     return false;
   }
+};
+
+const readOriginalImageSrc = (img: HTMLImageElement | null | undefined): string => {
+  if (!img) return '';
+  return img.getAttribute('data-mp-original-src') || '';
 };
 
 const KATEX_STYLE_PROPS = [
@@ -190,50 +241,61 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
     preprocessWeChatClone(contentNode as HTMLElement, clone);
 
     // 收集所有图片节点，后续统一并行处理。
+    const sourceImages = Array.from(contentNode.querySelectorAll('img'));
     const images = Array.from(clone.querySelectorAll('img'));
     
     const errors: string[] = [];
+    let attemptedUploads = 0;
+    let uploadedImages = 0;
     let failedCount = 0;
+    let passthroughImages = 0;
 
     if (images.length > 0) {
         console.log(`Processing ${images.length} images for WeChat export...`);
     }
 
     // 并行处理图片上传：单张失败不打断整体导出。
-    await Promise.all(images.map(async (img) => {
+    await Promise.all(images.map(async (img, index) => {
         const src = img.src;
+        const sourceImg = sourceImages[index];
+        const originalSrc = readOriginalImageSrc(sourceImg) || readOriginalImageSrc(img);
         try {
             let base64Data = '';
+            const shouldUpload =
+              originalSrc.startsWith('local://') ||
+              src.startsWith('data:image') ||
+              src.startsWith('blob:') ||
+              shouldMirrorHttpImage(src);
+
+            if (!shouldUpload) {
+                passthroughImages++;
+                return;
+            }
+
+            attemptedUploads++;
 
             // 场景 A：本地图片（data URI），直接上传。
             if (src.startsWith('data:image')) {
                 base64Data = src;
             } 
-            // 场景 B：blob URL，先转回 base64 再上传。
-            else if (src.startsWith('blob:')) {
-                const response = await fetch(src);
-                const blob = await response.blob();
-                base64Data = await blobToDataUrl(blob);
-            }
-            // 场景 C：同源静态资源（例如春序主题的修饰图），也需要中转成公网地址。
-            else if (shouldMirrorHttpImage(src)) {
-                const response = await fetch(src);
-                if (!response.ok) {
-                    throw new Error(`Fetch static image failed: ${response.status}`);
-                }
-                const blob = await response.blob();
-                base64Data = await blobToDataUrl(blob);
+            // 场景 B/C/D：local://、blob URL 或同源静态资源，直接读取页面上已经加载好的图片像素，
+            // 避免 fetch(blob:...) 被 CSP 拦截。
+            else if ((originalSrc.startsWith('local://') || src.startsWith('blob:') || shouldMirrorHttpImage(src)) && sourceImg) {
+                base64Data = await imageElementToDataUrl(sourceImg);
+            } else if (originalSrc.startsWith('local://') || src.startsWith('blob:') || shouldMirrorHttpImage(src)) {
+                throw new Error('Source image element not found');
             }
 
             // 有可上传数据时才执行图床替换。
             if (base64Data) {
                 const remoteUrl = await uploadToImgbb(base64Data);
                 img.src = remoteUrl;
+                uploadedImages++;
             }
         } catch (e: any) {
             console.error("Failed to process image for WeChat copy", e);
             failedCount++;
-            errors.push(e.message || "Unknown upload error");
+            errors.push(`第 ${index + 1} 张图片处理失败：${e.message || "Unknown upload error"}`);
             // 失败时保留原始 src，保证文本结构仍可复制。
         }
     }));
@@ -255,7 +317,10 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
     return {
         success: failedCount === 0,
         totalImages: images.length,
+        attemptedUploads,
+        uploadedImages,
         failedImages: failedCount,
+        passthroughImages,
         errors
     };
 };
