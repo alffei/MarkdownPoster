@@ -208,6 +208,8 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
       }
   };
 
+  const appearanceAnchorSide = isEditorCollapsed ? 'left' : 'right';
+
   return (
     <div className={`h-12 border-b relative z-40 shrink-0 transition-colors duration-500 
       ${isDarkMode 
@@ -281,6 +283,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         setCustomThemeColor={setCustomThemeColor}
                         onApplyTemplate={onApplyTemplate}
                         onRestoreTemplateDefaults={onRestorePosterTemplateDefaults}
+                        anchorSide={appearanceAnchorSide}
                     />
                 )}
 
@@ -290,6 +293,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         setConfig={setWeChatConfig}
                         isDarkMode={isDarkMode}
                         onClose={() => setShowAppearance(false)}
+                        anchorSide={appearanceAnchorSide}
                     />
                 )}
 
@@ -301,6 +305,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         setFontSize={setFontSize}
                         isDarkMode={isDarkMode}
                         onClose={() => setShowAppearance(false)}
+                        anchorSide={appearanceAnchorSide}
                     />
                 )}
             </div>

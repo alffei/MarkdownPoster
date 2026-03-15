@@ -25,6 +25,7 @@ interface WeChatAppearancePopoverProps {
   setConfig: (config: WeChatConfig) => void;
   isDarkMode: boolean;
   onClose: () => void;
+  anchorSide?: 'left' | 'right';
 }
 
 const detailToggleItems: { label: string; key: BooleanConfigKey }[] = [
@@ -118,7 +119,8 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   config,
   setConfig,
   isDarkMode,
-  onClose
+  onClose,
+  anchorSide = 'right'
 }) => {
   const typographyStyles = WECHAT_TYPOGRAPHY_STYLE_OPTIONS;
   const fontStyles = WECHAT_FONT_STYLE_OPTIONS;
@@ -257,7 +259,8 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   return (
     <div
       style={{ width: 'min(680px, calc(100vw - 16px))' }}
-      className={`absolute top-full right-0 mt-2 rounded-2xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none overflow-hidden
+      className={`absolute top-full mt-2 rounded-2xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 duration-200 select-none overflow-hidden
+      ${anchorSide === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
       ${isDarkMode
           ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50'
           : 'bg-white border-gray-200 text-gray-800 shadow-gray-300/40'

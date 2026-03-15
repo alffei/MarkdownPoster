@@ -13,6 +13,7 @@ interface WritingAppearancePopoverProps {
   setFontSize: (size: FontSize) => void;
   isDarkMode: boolean;
   onClose: () => void;
+  anchorSide?: 'left' | 'right';
 }
 
 export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> = ({
@@ -21,13 +22,15 @@ export const WritingAppearancePopover: React.FC<WritingAppearancePopoverProps> =
   fontSize,
   setFontSize,
   isDarkMode,
-  onClose
+  onClose,
+  anchorSide = 'right'
 }) => {
   const allThemes = ThemeRegistry.getWritingThemes();
   const allFontSizes = ThemeRegistry.getFontSizes();
 
   return (
-    <div className={`absolute top-full right-0 mt-2 w-[340px] rounded-xl shadow-2xl border p-5 z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none
+    <div className={`absolute top-full mt-2 w-[340px] rounded-xl shadow-2xl border p-5 z-50 animate-in fade-in zoom-in-95 duration-200 select-none
+      ${anchorSide === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
       ${isDarkMode 
         ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50' 
         : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/50'

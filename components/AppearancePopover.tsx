@@ -36,6 +36,7 @@ interface AppearancePopoverProps {
 
   // 恢复当前模板默认值（优先走 App，便于清除缓存微调）
   onRestoreTemplateDefaults?: () => void;
+  anchorSide?: 'left' | 'right';
 }
 
 const ScenarioOptions = [
@@ -256,7 +257,8 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
   customThemeColor,
   setCustomThemeColor,
   onApplyTemplate,
-  onRestoreTemplateDefaults
+  onRestoreTemplateDefaults,
+  anchorSide = 'right'
 }) => {
   // --- Data Loading ---
   const allLayouts = ThemeRegistry.getLayoutThemes();
@@ -324,7 +326,8 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
 
   return (
     // 宽度设置为 600px，保证 6 列模板卡片可完整显示
-    <div className={`absolute top-full right-0 mt-2 w-[600px] rounded-xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 origin-top-right duration-200 select-none overflow-hidden
+    <div className={`absolute top-full mt-2 w-[600px] rounded-xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 duration-200 select-none overflow-hidden
+      ${anchorSide === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
       ${isDarkMode 
         ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50' 
         : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/50'
