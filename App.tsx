@@ -1901,6 +1901,12 @@ export default function App() {
                 }`}
               >
               {[
+                { key: 'illustration', label: '插图生成', icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14l3-3 3 3 2-2 3 3M8 9h.01" />
+                  </svg>
+                )},
                 { key: 'semantic', label: '语义排版', icon: (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h13" />
@@ -1915,12 +1921,6 @@ export default function App() {
                 { key: 'poem', label: '竖排诗', icon: (
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M12 6v12M17 8v8" />
-                  </svg>
-                )},
-                { key: 'illustration', label: '插图生成', icon: (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect x="3" y="5" width="18" height="14" rx="2" ry="2" strokeWidth={2} />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14l3-3 3 3 2-2 3 3M8 9h.01" />
                   </svg>
                 )},
               ].map((item) => (

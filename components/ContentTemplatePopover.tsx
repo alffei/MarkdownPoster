@@ -417,10 +417,10 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
           {showTabs && (
             <div className="flex items-center gap-2">
               {[
+                { key: 'illustration', label: '插图生成' },
                 { key: 'semantic', label: '语义排版' },
                 { key: 'event', label: '活动海报' },
                 { key: 'poem', label: '竖排诗' },
-                { key: 'illustration', label: '插图生成' },
               ].map(item => (
                 <button
                   key={item.key}
