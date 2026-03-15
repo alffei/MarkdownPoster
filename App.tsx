@@ -572,11 +572,12 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_EDITOR_COLLAPSED, String(isEditorCollapsed));
   }, [isEditorCollapsed]);
-  
+
   // 引用句柄
   const exportRef = useRef<HTMLDivElement>(null);
   const weChatRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const liveEditorSelectionRef = useRef({ selectionStart: 0, selectionEnd: 0 });
   const editorPanelRef = useRef<HTMLDivElement>(null);
   const [isTemplatePopoverOpen, setIsTemplatePopoverOpen] = useState(false);
   const [smartPanelTemplate, setSmartPanelTemplate] = useState<TemplateKind>('semantic');
@@ -846,12 +847,17 @@ export default function App() {
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
+    syncLiveEditorSelection(e.target);
     setMarkdown(newText);
     // 输入过程做防抖，避免每个按键都写入历史栈导致撤销粒度过碎。
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       if (newText !== history[historyIndex]) pushToHistory(newText);
     }, 500);
+  };
+
+  const handleEditorSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    syncLiveEditorSelection(e.currentTarget);
   };
 
   const updateMarkdownImmediate = (newText: string) => {
@@ -894,6 +900,32 @@ export default function App() {
     return true;
   }, []);
 
+  const getSmartPanelMetrics = useCallback((template: TemplateKind) => {
+    if (template === 'illustration') {
+      return {
+        width: 960,
+        height: Math.min(760, Math.round(window.innerHeight * 0.9)),
+      };
+    }
+    return {
+      width: 560,
+      height: 520,
+    };
+  }, []);
+
+  const clampSmartPanelPosition = useCallback((x: number, y: number, template: TemplateKind) => {
+    const { width, height } = getSmartPanelMetrics(template);
+    const minX = 8;
+    const minY = 8;
+    const maxX = Math.max(minX, window.innerWidth - width - 8);
+    const maxY = Math.max(minY, window.innerHeight - height - 8);
+
+    return {
+      x: Math.min(maxX, Math.max(minX, Math.round(x))),
+      y: Math.min(maxY, Math.max(minY, Math.round(y))),
+    };
+  }, [getSmartPanelMetrics]);
+
   const openTemplatePopover = (template: TemplateKind = 'semantic') => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -904,6 +936,7 @@ export default function App() {
         selectionEnd: 0
       });
     } else {
+      syncLiveEditorSelection(textarea);
       const { selectionStart, selectionEnd, value } = textarea;
       const hasSelection = selectionStart !== selectionEnd;
       // 智能处理支持“选中优先”；插图模式无选区时默认留空，按光标插入。
@@ -920,11 +953,9 @@ export default function App() {
     setSmartPanelTemplate(template);
     const panelRect = editorPanelRef.current?.getBoundingClientRect();
     if (panelRect) {
-      // 每次打开都重置到编辑区附近，避免用户上次拖拽后丢失位置。
-      setSmartPanelPosition({
-        x: Math.round(panelRect.left + 120),
-        y: Math.round(panelRect.top + 4),
-      });
+      const preferredX = panelRect.left + 120;
+      const preferredY = panelRect.top + 4;
+      setSmartPanelPosition(clampSmartPanelPosition(preferredX, preferredY, template));
     }
     setIsTemplatePopoverOpen(true);
   };
@@ -960,6 +991,27 @@ export default function App() {
     return imgId;
   };
 
+  const getCurrentEditorInsertionContext = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return {
+        hasSelection: liveEditorSelectionRef.current.selectionStart !== liveEditorSelectionRef.current.selectionEnd,
+        selectionStart: liveEditorSelectionRef.current.selectionStart,
+        selectionEnd: liveEditorSelectionRef.current.selectionEnd,
+      };
+    }
+
+    const selectionStart = textarea.selectionStart;
+    const selectionEnd = textarea.selectionEnd;
+    liveEditorSelectionRef.current = { selectionStart, selectionEnd };
+
+    return {
+      hasSelection: selectionStart !== selectionEnd,
+      selectionStart,
+      selectionEnd,
+    };
+  }, []);
+
   const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => {
     const isIllustration = options?.sourceTemplate === 'illustration';
     let normalizedMode = mode;
@@ -980,11 +1032,7 @@ export default function App() {
 
     if (!normalizedResult.trim()) return;
     const activeInsertionContext = isIllustration
-      ? {
-        hasSelection: textarea.selectionStart !== textarea.selectionEnd,
-        selectionStart: textarea.selectionStart,
-        selectionEnd: textarea.selectionEnd,
-      }
+      ? getCurrentEditorInsertionContext()
       : templateContext;
     const { hasSelection, selectionStart, selectionEnd } = activeInsertionContext;
     let newText = currentValue;
@@ -1026,6 +1074,7 @@ export default function App() {
       if (textareaRef.current) {
         textareaRef.current.focus({ preventScroll: true });
         textareaRef.current.setSelectionRange(newSelectionStart, newSelectionEnd);
+        syncLiveEditorSelection(textareaRef.current);
       }
     });
 
@@ -1076,21 +1125,10 @@ export default function App() {
   useEffect(() => {
     if (!isDraggingSmartPanel) return;
     const handleMouseMove = (event: MouseEvent) => {
-      const panelWidth = smartPanelTemplate === 'illustration' ? 820 : 560;
-      const panelHeight = smartPanelTemplate === 'illustration'
-        ? Math.min(760, Math.round(window.innerHeight * 0.82))
-        : 520;
-      const minX = 8;
-      const minY = 8;
-      const maxX = Math.max(minX, window.innerWidth - panelWidth - 8);
-      const maxY = Math.max(minY, window.innerHeight - panelHeight - 8);
       const nextX = event.clientX - smartPanelDragOffsetRef.current.x;
       const nextY = event.clientY - smartPanelDragOffsetRef.current.y;
       // 面板移动限制在可视窗口内，避免拖出屏幕后无法找回。
-      setSmartPanelPosition({
-        x: Math.min(maxX, Math.max(minX, nextX)),
-        y: Math.min(maxY, Math.max(minY, nextY)),
-      });
+      setSmartPanelPosition(clampSmartPanelPosition(nextX, nextY, smartPanelTemplate));
     };
     const handleMouseUp = () => {
       setIsDraggingSmartPanel(false);
@@ -1101,7 +1139,7 @@ export default function App() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingSmartPanel, smartPanelTemplate]);
+  }, [clampSmartPanelPosition, isDraggingSmartPanel, smartPanelTemplate]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1229,11 +1267,30 @@ export default function App() {
       if (e.shiftKey) handleRedo(); else handleUndo();
     }
   };
+
+  const syncLiveEditorSelection = useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return;
+    liveEditorSelectionRef.current = {
+      selectionStart: textarea.selectionStart,
+      selectionEnd: textarea.selectionEnd
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      if (document.activeElement === textareaRef.current) {
+        syncLiveEditorSelection(textareaRef.current);
+      }
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [syncLiveEditorSelection]);
   
   // --- 编辑器操作辅助 ---
   const insertTextAtCursor = (textToInsert: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
+    syncLiveEditorSelection(textarea);
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const currentText = textarea.value;
@@ -1244,11 +1301,16 @@ export default function App() {
         if (textareaRef.current) {
             textareaRef.current.focus({ preventScroll: true });
             textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            syncLiveEditorSelection(textareaRef.current);
         }
     });
   };
 
-  const handleSelectAll = () => { textareaRef.current?.focus({ preventScroll: true }); textareaRef.current?.select(); };
+  const handleSelectAll = () => {
+    textareaRef.current?.focus({ preventScroll: true });
+    textareaRef.current?.select();
+    syncLiveEditorSelection(textareaRef.current);
+  };
   
   const handleCopySelection = async () => {
     const textarea = textareaRef.current;
@@ -1846,10 +1908,15 @@ export default function App() {
               <textarea
                 ref={textareaRef}
                 onScroll={handleEditorScroll}
+                onFocus={handleEditorSelectionChange}
+                onSelect={handleEditorSelectionChange}
+                onClick={handleEditorSelectionChange}
+                onMouseUp={handleEditorSelectionChange}
                 className={`h-full w-full pl-8 pr-8 pb-8 pt-2 resize-none focus:outline-none font-mono text-[15px] leading-[32px] bg-[length:100%_32px] bg-[position:0_0] bg-local transition-colors duration-500 ${isDarkMode ? 'text-[#d4cfbf] bg-[image:linear-gradient(transparent_31px,#333842_31px)] placeholder-[#5c6370] bg-[#23272e]' : 'text-[#2d2d2d] bg-transparent bg-[image:linear-gradient(transparent_31px,#e8e8e8_31px)] placeholder-gray-400/50'}`}
                 value={markdown}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
+                onKeyUp={handleEditorSelectionChange}
                 onPaste={handlePaste}
                 placeholder="在此输入 Markdown..."
                 spellCheck={false}

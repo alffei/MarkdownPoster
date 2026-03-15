@@ -29,6 +29,22 @@ interface ContentTemplatePopoverProps {
 
 const FULL_WIDTH_SPACE = '　';
 const ILLUSTRATION_RATIO_OPTIONS = ['4:3', '2:1', '16:9', '3:4', '1:2', '9:16', '1:1'] as const;
+const DEV_MOCK_ILLUSTRATION_DATA_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f3e8d2" />
+        <stop offset="100%" stop-color="#d6e6f5" />
+      </linearGradient>
+    </defs>
+    <rect width="1200" height="900" fill="url(#bg)" />
+    <rect x="120" y="120" width="960" height="660" rx="36" fill="#ffffff" opacity="0.78" />
+    <circle cx="270" cy="280" r="90" fill="#997343" opacity="0.18" />
+    <path d="M220 620c110-150 220-225 330-225s220 75 330 225" fill="none" stroke="#997343" stroke-width="18" stroke-linecap="round" opacity="0.75" />
+    <text x="600" y="375" text-anchor="middle" font-size="92" font-family="Arial, sans-serif" fill="#6f4f2c">Mock Illustration</text>
+    <text x="600" y="470" text-anchor="middle" font-size="42" font-family="Arial, sans-serif" fill="#8f8478">development only</text>
+  </svg>`
+)}`;
 
 const getRatioShapeStyle = (ratio: string): React.CSSProperties => {
   const [wRaw, hRaw] = ratio.split(':');
@@ -155,6 +171,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
   const [illustrationRatio, setIllustrationRatio] = useState<(typeof ILLUSTRATION_RATIO_OPTIONS)[number]>('4:3');
   const [illustrationPreviewUrl, setIllustrationPreviewUrl] = useState('');
   const [isStylePromptExpanded, setIsStylePromptExpanded] = useState(false);
+  const isDevMode = import.meta.env.DEV;
 
   const effectiveTemplate: TemplateKind = showTabs ? activeTemplate : (initialTemplate ?? activeTemplate);
 
@@ -350,6 +367,10 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
       sourceTemplate: effectiveTemplate,
       poemAttribution: effectiveTemplate === 'poem' ? poemAttribution.trim() : undefined,
     });
+  };
+
+  const preserveEditorFocus = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
   };
 
   return (
@@ -764,11 +785,25 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
                     ? (isIllustrationLoading ? '生成中...' : '重新生成')
                     : (isIllustrationLoading ? '生成中...' : '生成插图')}
                 </button>
+                {isDevMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIllustrationPreviewUrl(DEV_MOCK_ILLUSTRATION_DATA_URL)}
+                    className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors md:min-w-[140px] ${
+                      isDarkMode
+                        ? 'bg-[#2f3540] text-[#e5c07b] hover:bg-[#3e4451]'
+                        : 'bg-white text-[#8b7e74] border border-gray-200 hover:bg-[#f4f2eb]'
+                    }`}
+                  >
+                    模拟插图
+                  </button>
+                )}
                 <div className={`text-xs text-center md:flex-1 ${isDarkMode ? 'text-[#9aa1ac]' : 'text-gray-500'}`}>
                   生成预览后可插入到当前光标位置
                 </div>
                 <button
                   type="button"
+                  onMouseDown={preserveEditorFocus}
                   onClick={() => handleApply('insert')}
                   disabled={!canApply || isIllustrationLoading}
                   className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors md:min-w-[140px] ${
@@ -818,6 +853,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
           >
             <button
               type="button"
+              onMouseDown={preserveEditorFocus}
               onClick={() => handleApply('insert')}
               disabled={!canApply || isPoemMetaLoading || isIllustrationLoading}
               className={`px-3 py-1.5 rounded-md text-sm font-semibold inline-flex items-center gap-1.5 ${
@@ -835,6 +871,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
             <div className={`w-px h-5 ${isDarkMode ? 'bg-[#3e4451]' : 'bg-gray-300'}`} />
             <button
               type="button"
+              onMouseDown={preserveEditorFocus}
               onClick={() => handleApply('replace')}
               disabled={!canApply || isPoemMetaLoading}
               className={`px-3 py-1.5 rounded-md text-sm font-semibold inline-flex items-center gap-1.5 ${
