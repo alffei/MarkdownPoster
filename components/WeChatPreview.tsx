@@ -85,6 +85,11 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   containerRef,
   onScroll
 }, ref) => {
+  type FootnoteLink = {
+    label: string;
+    url: string;
+  };
+
   const templateRender = useMemo(
     () => getWeChatRenderProfile(config.template, config.typographyStyle),
     [config.template, config.typographyStyle]
@@ -168,7 +173,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     }
 
     // 开启“引用链接”时，把正文链接转成脚注编号
-    const links: string[] = [];
+    const links: FootnoteLink[] = [];
     if (config.linkReferences) {
       let linkCounter = 0;
       const linkRegex = /([^!]|^)\[([^\]]+)\]\(([^)]+)\)/g;
@@ -179,7 +184,10 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         if (url.startsWith('ruby:')) return match;
 
         linkCounter++;
-        links.push(`${linkText}: ${url}`);
+        links.push({
+          label: linkText.trim() || url.trim(),
+          url: url.trim(),
+        });
         return `${prefix}[${linkText}](${url})\`[${linkCounter}]\``;
       });
     }
@@ -1498,7 +1506,17 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           const decodedReading = decodeURIComponent(reading);
           return <RubyRender baseText={children} reading={decodedReading} style={{ fontSize: 'inherit', color: 'inherit' }} />;
         }
-        return <a href={href} style={themeStyle.link}>{children}</a>;
+        return (
+          <span
+            style={{
+              ...themeStyle.link,
+              textDecoration: 'none',
+              cursor: 'text',
+            }}
+          >
+            {children}
+          </span>
+        );
       },
       hr: ({ node }: any) => <hr style={themeStyle.hr} />,
 
@@ -1603,15 +1621,21 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 {/* 脚注区域 */}
                 {config.linkReferences && footnotes.length > 0 && (
                   <div style={{ marginTop: '3em', paddingTop: '1.5em', borderTop: '1px dashed #e5e7eb' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151', marginBottom: '0.75em' }}>引用链接</h4>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {footnotes.map((fn, idx) => (
-                        <div key={idx} style={{ marginBottom: '4px', display: 'flex', gap: '4px', wordBreak: 'break-all' }}>
-                          <span style={{ flexShrink: 0, width: '1.5em', textAlign: 'center', opacity: 0.6 }}>[{idx + 1}]</span>
-                          <span>{fn}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#374151', margin: '0 0 0.75em' }}>引用链接</p>
+                    {footnotes.map((fn, idx) => (
+                      <p
+                        key={idx}
+                        style={{
+                          margin: '0 0 8px',
+                          fontSize: '12px',
+                          color: '#6b7280',
+                          lineHeight: '1.8',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {`[${idx + 1}] ${fn.label}: ${fn.url}`}
+                      </p>
+                    ))}
                   </div>
                 )}
               </div>

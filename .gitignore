@@ -18,6 +18,7 @@ docs
 image
 test-results
 playwright-report
+.test
 
 # Editor directories and files
 .vscode/*
