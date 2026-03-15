@@ -929,12 +929,13 @@ export default function App() {
     setIsTemplatePopoverOpen(true);
   };
 
-  const sanitizeImageAlt = (raw: string) => {
-    return raw
-      .replace(/\r?\n/g, ' ')
-      .replace(/\s+/g, ' ')
-      .replace(/[\[\]]/g, '')
-      .trim();
+  const buildNextAiIllustrationAlt = (text: string) => {
+    const matches = [...text.matchAll(/!\[AI 生成_(\d+)\]\(local:\/\/img_[a-z0-9]+\)/gi)];
+    const maxIndex = matches.reduce((max, match) => {
+      const current = Number.parseInt(match[1] || '0', 10);
+      return Number.isFinite(current) ? Math.max(max, current) : max;
+    }, 0);
+    return `AI 生成_${String(maxIndex + 1).padStart(3, '0')}`;
   };
 
   const persistGeneratedImage = (dataUrl: string) => {
@@ -963,22 +964,21 @@ export default function App() {
     const isIllustration = options?.sourceTemplate === 'illustration';
     let normalizedMode = mode;
     let normalizedResult = result;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const currentValue = textarea.value;
 
     if (isIllustration) {
       const generatedDataUrl = options?.illustrationDataUrl || '';
       const storedImageId = persistGeneratedImage(generatedDataUrl);
       if (!storedImageId) return;
-      const altText = sanitizeImageAlt(options?.illustrationAlt || 'AI插图');
+      const altText = buildNextAiIllustrationAlt(currentValue);
       normalizedResult = `![${altText}](local://${storedImageId})`;
       normalizedMode = 'insert';
       setRepairNotice({ message: '已插入 AI 插图', id: Date.now() });
     }
 
     if (!normalizedResult.trim()) return;
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const currentValue = textarea.value;
     const { hasSelection, selectionStart, selectionEnd } = templateContext;
     let newText = currentValue;
     let newSelectionStart = selectionStart;
