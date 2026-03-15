@@ -70,10 +70,10 @@ const parseInspirationMarker = (text: string): { kind: InspirationMarkerKind; cl
 };
 
 const SPRING_DECORATIVE_ASSETS = {
-  titleBrush: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-title-brush-bg-v1.png',
-  curveBottom: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-thin-v1.png',
-  leafTopLeft: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-top-left-v1.png',
-  leafRight: '/wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-right-v1.png',
+  titleBrush: './wechat-assets/spring-fresh/decorative/wx-spring-deco-title-brush-bg-v1.png',
+  curveBottom: './wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-thin-v1.png',
+  leafTopLeft: './wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-top-left-v1.png',
+  leafRight: './wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-right-v1.png',
 };
 
 export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
