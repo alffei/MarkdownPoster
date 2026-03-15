@@ -979,7 +979,14 @@ export default function App() {
     }
 
     if (!normalizedResult.trim()) return;
-    const { hasSelection, selectionStart, selectionEnd } = templateContext;
+    const activeInsertionContext = isIllustration
+      ? {
+        hasSelection: textarea.selectionStart !== textarea.selectionEnd,
+        selectionStart: textarea.selectionStart,
+        selectionEnd: textarea.selectionEnd,
+      }
+      : templateContext;
+    const { hasSelection, selectionStart, selectionEnd } = activeInsertionContext;
     let newText = currentValue;
     let newSelectionStart = selectionStart;
     let newSelectionEnd = selectionStart;

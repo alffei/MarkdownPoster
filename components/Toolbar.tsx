@@ -47,7 +47,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 almost
               </span>
               <span className="text-xs font-medium tracking-wide">
-                最有品味的 Md 转换器
+                最有品味的 Md 编辑生成器
               </span>
             </div>
           </div>
