@@ -92,6 +92,42 @@ const blobToDataUrl = (blob: Blob): Promise<string> => {
   });
 };
 
+const loadImageFromDataUrl = (dataUrl: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('AI 图片加载失败'));
+    img.src = dataUrl;
+  });
+};
+
+const renderImageToDataUrl = (
+  img: HTMLImageElement,
+  maxWidth: number,
+  quality: number
+) => {
+  const originalWidth = img.naturalWidth || img.width;
+  const originalHeight = img.naturalHeight || img.height;
+  if (!originalWidth || !originalHeight) {
+    throw new Error('AI 图片尺寸无效');
+  }
+
+  const targetWidth = Math.min(originalWidth, maxWidth);
+  const targetHeight = Math.max(1, Math.round((originalHeight * targetWidth) / originalWidth));
+  const canvas = document.createElement('canvas');
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas context error');
+  }
+
+  ctx.clearRect(0, 0, targetWidth, targetHeight);
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+  return canvas.toDataURL('image/webp', quality);
+};
+
 const normalizeZipPath = (rawPath: string) => {
   const normalized = rawPath.replace(/\\/g, '/').replace(/^\/+/, '');
   const segments = normalized.split('/');
@@ -997,25 +1033,52 @@ export default function App() {
     return `AI 生成_${String(maxIndex + 1).padStart(3, '0')}`;
   };
 
-  const persistGeneratedImage = (dataUrl: string) => {
-    if (!dataUrl.startsWith('data:image/')) {
+  const persistGeneratedImage = async (dataUrl: string) => {
+    const normalizedDataUrl = dataUrl.trim();
+    if (!normalizedDataUrl.startsWith('data:image/')) {
       setRepairNotice({ message: '生成结果不是有效图片', id: Date.now() });
       return null;
     }
+
     const imgId = `img_${Math.random().toString(36).slice(2, 11)}`;
-    const newPool = { ...imagePoolRef.current, [imgId]: dataUrl };
+    let bestDataUrl = normalizedDataUrl;
+
+    const estimatePoolSize = (candidate: string) =>
+      JSON.stringify({ ...imagePoolRef.current, [imgId]: candidate }).length;
+
     try {
-      const serialized = JSON.stringify(newPool);
-      if (serialized.length > MAX_IMAGE_POOL_STORAGE_SIZE) {
-        setRepairNotice({ message: '本地存储空间不足，无法保存插图', id: Date.now() });
-        return null;
+      if (estimatePoolSize(bestDataUrl) > MAX_IMAGE_POOL_STORAGE_SIZE) {
+        const image = await loadImageFromDataUrl(normalizedDataUrl);
+        const compressionPlans = [
+          { maxWidth: 1600, quality: 0.86 },
+          { maxWidth: 1400, quality: 0.8 },
+          { maxWidth: 1200, quality: 0.74 },
+          { maxWidth: 1024, quality: 0.68 },
+          { maxWidth: 896, quality: 0.62 },
+        ];
+
+        for (const plan of compressionPlans) {
+          const candidate = renderImageToDataUrl(image, plan.maxWidth, plan.quality);
+          if (candidate.length < bestDataUrl.length) {
+            bestDataUrl = candidate;
+          }
+          if (estimatePoolSize(candidate) <= MAX_IMAGE_POOL_STORAGE_SIZE) {
+            bestDataUrl = candidate;
+            break;
+          }
+        }
       }
-    } catch {
-      setRepairNotice({ message: '本地存储空间不足，无法保存插图', id: Date.now() });
-      return null;
+    } catch (error) {
+      console.warn('Failed to normalize AI illustration before insert', error);
     }
 
-    setImagePool(newPool);
+    const finalPool = { ...imagePoolRef.current, [imgId]: bestDataUrl };
+    setImagePool(finalPool);
+
+    if (estimatePoolSize(bestDataUrl) > MAX_IMAGE_POOL_STORAGE_SIZE) {
+      setRepairNotice({ message: '已插入 AI 插图（图片较大，刷新后可能丢失）', id: Date.now() });
+    }
+
     return imgId;
   };
 
@@ -1040,7 +1103,7 @@ export default function App() {
     };
   }, []);
 
-  const handleApplyTemplateResult = (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => {
+  const handleApplyTemplateResult = async (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => {
     const isIllustration = options?.sourceTemplate === 'illustration';
     let normalizedMode = mode;
     let normalizedResult = result;
@@ -1050,7 +1113,7 @@ export default function App() {
 
     if (isIllustration) {
       const generatedDataUrl = options?.illustrationDataUrl || '';
-      const storedImageId = persistGeneratedImage(generatedDataUrl);
+      const storedImageId = await persistGeneratedImage(generatedDataUrl);
       if (!storedImageId) return;
       const altText = buildNextAiIllustrationAlt(currentValue);
       normalizedResult = `![${altText}](local://${storedImageId})`;
