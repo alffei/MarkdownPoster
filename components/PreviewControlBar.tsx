@@ -57,6 +57,8 @@ interface PreviewControlBarProps {
 
   // 恢复当前模板默认值（并清理该模板缓存的微调）
   onRestorePosterTemplateDefaults?: () => void;
+  isEditorCollapsed?: boolean;
+  onToggleEditorCollapse?: () => void;
 }
 
 interface NotificationState {
@@ -99,7 +101,9 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
   writingTheme,
   setWritingTheme,
   onApplyTemplate,
-  onRestorePosterTemplateDefaults
+  onRestorePosterTemplateDefaults,
+  isEditorCollapsed = false,
+  onToggleEditorCollapse
 }) => {
   const [showAppearance, setShowAppearance] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
@@ -187,7 +191,33 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
       }`}>
       
       {/* 左侧：外观设置入口 */}
-      <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-10 flex items-center">
+      <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2">
+        {onToggleEditorCollapse && (
+          <button
+            onClick={onToggleEditorCollapse}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+              isDarkMode
+                ? 'bg-[#282c34] border-[#3e4451] text-[#abb2bf] hover:bg-[#2c313a]'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={isEditorCollapsed ? '展开左侧编辑区' : '收起左侧编辑区'}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isEditorCollapsed ? (
+                <>
+                  <rect x="3" y="4" width="18" height="16" rx="2" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M13 9l-3 3 3 3" />
+                </>
+              ) : (
+                <>
+                  <rect x="3" y="4" width="18" height="16" rx="2" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M11 9l3 3-3 3" />
+                </>
+              )}
+            </svg>
+            <span>{isEditorCollapsed ? '展开编辑' : '收起编辑'}</span>
+          </button>
+        )}
         {(viewMode === ViewMode.Poster || viewMode === ViewMode.WeChat || viewMode === ViewMode.Writing) && (
             <div className="relative" ref={popoverRef}>
                 <button

@@ -42,6 +42,7 @@ const STORAGE_KEY_VIEW_MODE = 'markdown_poster_view_mode';
 const STORAGE_KEY_POSTER_TEMPLATE_ID = 'markdown_poster_active_template_id';
 const STORAGE_KEY_POSTER_TEMPLATE_TWEAKS = 'markdown_poster_template_tweaks_v1';
 const STORAGE_KEY_POSTER_WIDTH = 'markdown_poster_width';
+const STORAGE_KEY_EDITOR_COLLAPSED = 'markdown_poster_editor_collapsed';
 
 // 历史记录上限
 const MAX_HISTORY_SIZE = 10;
@@ -547,6 +548,10 @@ export default function App() {
   // ---------------------------
 
   const [leftWidth, setLeftWidth] = useState(50); 
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_EDITOR_COLLAPSED);
+    return saved === 'true';
+  });
   const [posterWidthPreset, setPosterWidthPreset] = useState<number | undefined>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_POSTER_WIDTH);
     if (!saved) return undefined;
@@ -563,6 +568,10 @@ export default function App() {
     }
     localStorage.removeItem(STORAGE_KEY_POSTER_WIDTH);
   }, [posterWidthPreset]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_EDITOR_COLLAPSED, String(isEditorCollapsed));
+  }, [isEditorCollapsed]);
   
   // 引用句柄
   const exportRef = useRef<HTMLDivElement>(null);
@@ -1582,6 +1591,12 @@ export default function App() {
     setPosterWidthPreset(prev => (prev === rounded ? prev : rounded));
   }, []);
 
+  const toggleEditorCollapse = useCallback(() => {
+    setIsEditorCollapsed(prev => !prev);
+  }, []);
+
+  const effectiveLeftWidth = isEditorCollapsed ? 0 : leftWidth;
+
   return (
     <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#23272e]' : 'bg-white'}`}>
       
@@ -1600,9 +1615,13 @@ export default function App() {
         {/* 左侧：编辑区 */}
         <div 
           ref={editorPanelRef}
-          style={{ width: `${leftWidth}%` }}
-          className={`flex flex-col z-10 relative transition-colors duration-500
-            ${isDarkMode ? 'bg-[#23272e] shadow-none' : 'bg-[#fdfcf5] border-r border-[#e0e0e0] shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
+          style={{ width: `${effectiveLeftWidth}%` }}
+          className={`flex flex-col z-10 relative min-w-0 overflow-hidden transition-all duration-300
+            ${isEditorCollapsed
+              ? 'opacity-0 pointer-events-none border-r-0 shadow-none'
+              : isDarkMode
+                ? 'bg-[#23272e] shadow-none'
+                : 'bg-[#fdfcf5] border-r border-[#e0e0e0] shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
           `}
         >
           {repairNotice && (
@@ -1834,7 +1853,13 @@ export default function App() {
         </div>
 
         {/* 中间拖拽分割条 */}
-        <div className="w-6 -ml-3 h-full z-20 cursor-col-resize flex items-center justify-center group flex-shrink-0 select-none relative" onMouseDown={startResizing} title="拖动调整宽度">
+        <div
+          className={`h-full z-20 flex items-center justify-center group flex-shrink-0 select-none relative transition-all duration-300 ${
+            isEditorCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-6 -ml-3 cursor-col-resize opacity-100'
+          }`}
+          onMouseDown={startResizing}
+          title="拖动调整宽度"
+        >
            <div className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-px h-full transition-colors ${isDarkMode ? 'bg-transparent group-hover:bg-[#5c6370]/50' : 'bg-transparent group-hover:bg-[#8b7e74]/50'}`} />
            <div className={`relative z-30 w-2 h-16 border shadow-sm flex flex-col items-center justify-center gap-2 transition-all duration-200 ${isDarkMode ? 'bg-[#1e2227] border-[#181a1f] group-hover:bg-[#2c313a] group-hover:border-[#5c6370]' : 'bg-white border-gray-300 group-hover:border-[#8b7e74] group-hover:bg-[#8b7e74]/10'}`}>
              <div className={`w-0.5 h-0.5 ${isDarkMode ? 'bg-[#5c6370]' : 'bg-gray-400 group-hover:bg-[#8b7e74]'}`} />
@@ -1889,6 +1914,8 @@ export default function App() {
 
             onApplyTemplate={handleApplyTemplate}
             onRestorePosterTemplateDefaults={handleRestorePosterTemplateDefaults}
+            isEditorCollapsed={isEditorCollapsed}
+            onToggleEditorCollapse={toggleEditorCollapse}
           />
           
           <div className="relative flex-1 min-h-0 overflow-hidden">
