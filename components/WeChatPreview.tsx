@@ -542,6 +542,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             <h2
               style={{
                 ...themeStyle.h2,
+                fontSize: headingSizes.h2,
                 margin: '30px 0 14px',
                 borderBottom: `1px solid ${config.primaryColor}`,
                 paddingBottom: '8px',
@@ -576,7 +577,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 marginBottom: '10px',
                 color: '#CC7C5B',
                 letterSpacing: '2px',
-                fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '20px') : headingSizes.h3,
+                fontSize: headingSizes.h3,
                 fontWeight: 700,
                 fontFamily: fontStyleDef.headingFontFamily,
               }}
@@ -794,22 +795,29 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                 <section
                   style={{
                     position: 'relative',
-                    display: 'inline-flex',
+                    display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '0 30px',
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    padding: '0 24px',
                   }}
                 >
                   <span
                     style={{
-                      fontSize: 'clamp(22px, 3.6vw, 30px)',
-                      lineHeight: 1.14,
+                      display: 'block',
+                      maxWidth: '100%',
+                      fontSize: 'clamp(16px, 2.5vw, 21px)',
+                      lineHeight: 1.24,
                       letterSpacing: '0.6px',
                       color: '#000000',
                       fontWeight: 700,
                       fontFamily: fontStyleDef.headingFontFamily,
-                      whiteSpace: 'nowrap',
+                      textAlign: 'center',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
                     }}
                   >
                     {headingText}
