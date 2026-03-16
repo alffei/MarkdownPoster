@@ -369,7 +369,20 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </ul>
         );
       },
-      ol: ({node, children}: any) => <ol style={{paddingLeft: '1.5em', marginBottom: '1.5em', listStyleType: 'decimal', color: (themeStyle.list as any).color}}>{children}</ol>,
+      ol: ({node, children, style, ...props}: any) => (
+          <ol
+              {...props}
+              style={{
+                  paddingLeft: '1.5em',
+                  marginBottom: '1.5em',
+                  listStyleType: 'decimal',
+                  color: (themeStyle.list as any).color,
+                  ...(style || {})
+              }}
+          >
+              {children}
+          </ol>
+      ),
       li: ({node, className, children}: any) => {
          const isTaskList = className?.includes('task-list-item');
          return (
