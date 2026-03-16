@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WeChatPreview } from '../components/WeChatPreview';
-import type { WeChatConfig } from '../types';
+import { getDefaultWeChatConfig } from '../config/wechatTemplates';
 
-const config: WeChatConfig = {
-  layout: 'Base',
+const config = {
+  ...getDefaultWeChatConfig(),
   primaryColor: '#07c160',
   codeTheme: 'vsDark',
   macCodeBlock: true,
@@ -17,6 +17,9 @@ const config: WeChatConfig = {
   captionType: 'title',
   fontSize: 'Medium',
   lineHeight: 'comfortable',
+  template: 'basic',
+  typographyStyle: 'standard',
+  fontStyle: 'standard',
 };
 
 const markdown = [
