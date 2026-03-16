@@ -7,6 +7,7 @@
     "dev": "vite --configLoader native",
     "build": "vite build --configLoader native",
     "preview": "vite preview --configLoader native",
+    "test": "tsx --test",
     "check:comment-only": "node scripts/check-comment-only.mjs --base HEAD",
     "check:comment-only:relaxed": "node scripts/check-comment-only.mjs --base HEAD --allow-new-files",
     "guard:comment": "bash scripts/comment-guard.sh HEAD"
@@ -36,6 +37,7 @@
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.6",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
