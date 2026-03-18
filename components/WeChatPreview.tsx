@@ -1290,29 +1290,43 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           </ul>
         );
       },
-      ol: ({ node, children }: any) => {
+      ol: ({ node, children, start, style, ...props }: any) => {
+        const startIndex = Number.isFinite(start) ? start : 1;
         if (isEditorialTemplate) {
           const items = React.Children.toArray(children).filter(
             (item) => React.isValidElement(item) && item.type === 'li'
           ) as React.ReactElement<any>[];
           if (!items.length) {
             return (
-              <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: '#3B3B38' }}>
+              <ol
+                {...props}
+                start={start}
+                style={{
+                  paddingLeft: '1.5em',
+                  marginBottom: templateRender.list.blockMarginBottom,
+                  listStyleType: 'decimal',
+                  color: '#3B3B38',
+                  ...(style || {}),
+                }}
+              >
                 {children}
               </ol>
             );
           }
           return (
             <ol
+              {...props}
+              start={start}
               style={{
                 listStyleType: 'none',
                 paddingLeft: 0,
                 marginBottom: templateRender.list.blockMarginBottom,
+                ...(style || {}),
               }}
             >
               {items.map((item, index) => {
                 const key = item.key != null ? item.key : `editorial-ol-${index}`;
-                const marker = `${index + 1}.`;
+                const marker = `${startIndex + index}.`;
                 return (
                   <li
                     key={String(key)}
@@ -1350,21 +1364,38 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             (item) => React.isValidElement(item) && item.type === 'li'
           ) as React.ReactElement<any>[];
           if (!items.length) {
-            return <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: (themeStyle.list as any).color }}>{children}</ol>;
+            return (
+              <ol
+                {...props}
+                start={start}
+                style={{
+                  paddingLeft: '1.5em',
+                  marginBottom: templateRender.list.blockMarginBottom,
+                  listStyleType: 'decimal',
+                  color: (themeStyle.list as any).color,
+                  ...(style || {}),
+                }}
+              >
+                {children}
+              </ol>
+            );
           }
           return (
             <ol
+              {...props}
+              start={start}
               style={{
                 listStyleType: 'none',
                 paddingLeft: 0,
                 marginBottom: templateRender.list.blockMarginBottom,
                 marginTop: '4px',
+                ...(style || {}),
               }}
             >
               {items.map((item, index) => {
                 const key = item.key != null ? item.key : `recruit-ol-${index}`;
                 const content = item.props.children;
-                const no = String(index + 1).padStart(2, '0');
+                const no = String(startIndex + index).padStart(2, '0');
                 return (
                   <li
                     key={String(key)}
@@ -1413,7 +1444,21 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </ol>
           );
         }
-        return <ol style={{ paddingLeft: '1.5em', marginBottom: templateRender.list.blockMarginBottom, listStyleType: 'decimal', color: (themeStyle.list as any).color }}>{children}</ol>;
+        return (
+          <ol
+            {...props}
+            start={start}
+            style={{
+              paddingLeft: '1.5em',
+              marginBottom: templateRender.list.blockMarginBottom,
+              listStyleType: 'decimal',
+              color: (themeStyle.list as any).color,
+              ...(style || {}),
+            }}
+          >
+            {children}
+          </ol>
+        );
       },
       li: ({ node, className, children }: any) => {
         const isTaskList = className?.includes('task-list-item');
