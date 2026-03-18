@@ -66,6 +66,33 @@ const imageElementToDataUrl = async (img: HTMLImageElement): Promise<string> => 
   return canvas.toDataURL('image/png');
 };
 
+const blobToDataUrl = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        resolve(result);
+        return;
+      }
+      reject(new Error('Failed to read blob as data URL'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read blob'));
+    reader.readAsDataURL(blob);
+  });
+
+const imageUrlToDataUrl = async (src: string): Promise<string> => {
+  if (src.startsWith('data:image')) return src;
+
+  const response = await fetch(new URL(src, window.location.href).href);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image asset: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+};
+
 const shouldMirrorHttpImage = (src: string): boolean => {
   try {
     const url = new URL(src, window.location.href);
@@ -82,6 +109,58 @@ const shouldMirrorHttpImage = (src: string): boolean => {
 const readOriginalImageSrc = (img: HTMLImageElement | null | undefined): string => {
   if (!img) return '';
   return img.getAttribute('data-mp-original-src') || '';
+};
+
+const CSS_URL_PATTERN = /url\((['"]?)(.*?)\1\)/g;
+
+type CssUrlReference = {
+  raw: string;
+  url: string;
+};
+
+const extractCssUrlReferences = (value: string): CssUrlReference[] => {
+  const refs: CssUrlReference[] = [];
+  if (!value || value === 'none') return refs;
+
+  value.replace(CSS_URL_PATTERN, (raw, _quote, url) => {
+    const trimmed = String(url || '').trim();
+    if (trimmed) {
+      refs.push({ raw, url: trimmed });
+    }
+    return raw;
+  });
+
+  return refs;
+};
+
+type BackgroundAssetNode = {
+  source: HTMLElement;
+  clone: HTMLElement;
+  backgroundImage: string;
+  refs: CssUrlReference[];
+};
+
+const collectBackgroundAssetNodes = (sourceRoot: HTMLElement, exportRoot: HTMLElement): BackgroundAssetNode[] => {
+  const sourceNodes = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll<HTMLElement>('*'))];
+  const exportNodes = [exportRoot, ...Array.from(exportRoot.querySelectorAll<HTMLElement>('*'))];
+  const nodeCount = Math.min(sourceNodes.length, exportNodes.length);
+  const assets: BackgroundAssetNode[] = [];
+
+  for (let i = 0; i < nodeCount; i += 1) {
+    const sourceNode = sourceNodes[i];
+    const exportNode = exportNodes[i];
+    const backgroundImage = sourceNode.style.backgroundImage || exportNode.style.backgroundImage;
+    const refs = extractCssUrlReferences(backgroundImage);
+    if (refs.length === 0) continue;
+    assets.push({
+      source: sourceNode,
+      clone: exportNode,
+      backgroundImage,
+      refs,
+    });
+  }
+
+  return assets;
 };
 
 const KATEX_STYLE_PROPS = [
@@ -243,6 +322,8 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
     // 收集所有图片节点，后续统一并行处理。
     const sourceImages = Array.from(contentNode.querySelectorAll('img'));
     const images = Array.from(clone.querySelectorAll('img'));
+    const backgroundAssets = collectBackgroundAssetNodes(contentNode as HTMLElement, clone);
+    const assetUploadCache = new Map<string, Promise<string>>();
     
     const errors: string[] = [];
     let attemptedUploads = 0;
@@ -250,8 +331,10 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
     let failedCount = 0;
     let passthroughImages = 0;
 
-    if (images.length > 0) {
-        console.log(`Processing ${images.length} images for WeChat export...`);
+    const totalAssetCount = images.length + backgroundAssets.reduce((sum, asset) => sum + asset.refs.length, 0);
+
+    if (totalAssetCount > 0) {
+        console.log(`Processing ${totalAssetCount} visual assets for WeChat export...`);
     }
 
     // 并行处理图片上传：单张失败不打断整体导出。
@@ -300,6 +383,44 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
         }
     }));
 
+    // 处理样式背景图：例如公众号模板里的装饰底纹 background-image。
+    await Promise.all(backgroundAssets.map(async (asset, assetIndex) => {
+        try {
+            let nextBackgroundImage = asset.clone.style.backgroundImage || asset.backgroundImage;
+
+            for (const ref of asset.refs) {
+                const shouldUpload =
+                  ref.url.startsWith('data:image') ||
+                  ref.url.startsWith('blob:') ||
+                  shouldMirrorHttpImage(ref.url);
+
+                if (!shouldUpload) {
+                    passthroughImages++;
+                    continue;
+                }
+
+                attemptedUploads++;
+
+                const resolvedUrl = new URL(ref.url, window.location.href).href;
+                let uploadPromise = assetUploadCache.get(resolvedUrl);
+                if (!uploadPromise) {
+                    uploadPromise = imageUrlToDataUrl(ref.url).then((dataUrl) => uploadToImgbb(dataUrl));
+                    assetUploadCache.set(resolvedUrl, uploadPromise);
+                }
+
+                const remoteUrl = await uploadPromise;
+                nextBackgroundImage = nextBackgroundImage.replace(ref.raw, `url("${remoteUrl}")`);
+                uploadedImages++;
+            }
+
+            asset.clone.style.backgroundImage = nextBackgroundImage;
+        } catch (e: any) {
+            console.error('Failed to process background image for WeChat copy', e);
+            failedCount++;
+            errors.push(`第 ${images.length + assetIndex + 1} 个背景图处理失败：${e.message || 'Unknown upload error'}`);
+        }
+    }));
+
     // 富文本用于公众号粘贴，纯文本作为兼容兜底。
     const htmlContent = clone.innerHTML;
     
@@ -316,7 +437,7 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
 
     return {
         success: failedCount === 0,
-        totalImages: images.length,
+        totalImages: totalAssetCount,
         attemptedUploads,
         uploadedImages,
         failedImages: failedCount,

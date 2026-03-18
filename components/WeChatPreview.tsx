@@ -996,15 +996,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     overflow: 'hidden',
                   }}
                 >
-                  <section
-                    style={{
-                      width: 'calc(100% - 58px)',
-                      height: '1px',
-                      margin: '0 0 14px 58px',
-                      backgroundColor: config.primaryColor,
-                      opacity: 0.9,
-                    }}
-                  />
                   <img
                     src={SPRING_DECORATIVE_ASSETS.leafRight}
                     alt=""
