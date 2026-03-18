@@ -7,7 +7,7 @@
     "dev": "vite --configLoader native",
     "build": "vite build --configLoader native",
     "preview": "vite preview --configLoader native",
-    "test": "tsx --test",
+    "test": "tsx --test tests/**/*.test.tsx",
     "check:comment-only": "node scripts/check-comment-only.mjs --base HEAD",
     "check:comment-only:relaxed": "node scripts/check-comment-only.mjs --base HEAD --allow-new-files",
     "guard:comment": "bash scripts/comment-guard.sh HEAD"

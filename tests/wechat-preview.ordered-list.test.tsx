@@ -3,24 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { WeChatPreview } from '../components/WeChatPreview';
-import { getDefaultWeChatConfig } from '../config/wechatTemplates';
-
-const config = {
-  ...getDefaultWeChatConfig(),
-  primaryColor: '#07c160',
-  codeTheme: 'vsDark',
-  macCodeBlock: true,
-  lineNumbers: true,
-  linkReferences: true,
-  indent: false,
-  justify: true,
-  captionType: 'title',
-  fontSize: 'Medium',
-  lineHeight: 'comfortable',
-  template: 'basic',
-  typographyStyle: 'standard',
-  fontStyle: 'standard',
-};
+import { getWeChatTemplateDefaultConfig } from '../config/wechatTemplates';
 
 const markdown = [
   '1. **第一条**：这一条后面插入图片，序号应继续递增。',
@@ -36,17 +19,53 @@ const markdown = [
   '3. **第三条**：这里应该保持 3.',
 ].join('\n');
 
-test('preserves ordered list numbering after an intervening image block', () => {
-  const html = renderToStaticMarkup(
+const renderPreview = (template: 'basic' | 'recruit', typographyStyle: 'standard' | 'editorial' = 'standard') => {
+  const config = {
+    ...getWeChatTemplateDefaultConfig(template, typographyStyle),
+    primaryColor: '#07c160',
+    codeTheme: 'vsDark',
+    macCodeBlock: true,
+    lineNumbers: true,
+    linkReferences: true,
+    indent: false,
+    justify: true,
+    captionType: 'title',
+    fontSize: 'Medium',
+    lineHeight: 'comfortable',
+    template,
+    typographyStyle: template === 'basic' ? typographyStyle : 'standard',
+    fontStyle: 'standard',
+  } as const;
+
+  return renderToStaticMarkup(
     <WeChatPreview
       markdown={markdown}
-      config={config}
+      config={config as any}
       imagePool={{}}
       isDarkMode={false}
       visible
     />
   );
+};
 
+test('preserves ordered list numbering after an intervening image block in standard wechat mode', () => {
+  const html = renderPreview('basic', 'standard');
+  const orderedLists = html.match(/<ol\b[^>]*>/g) ?? [];
+
+  assert.equal(orderedLists.length, 2);
+  assert.match(orderedLists[1], /\bstart="2"/);
+});
+
+test('preserves ordered list numbering after an intervening image block in editorial wechat mode', () => {
+  const html = renderPreview('basic', 'editorial');
+  const orderedLists = html.match(/<ol\b[^>]*>/g) ?? [];
+
+  assert.equal(orderedLists.length, 2);
+  assert.match(orderedLists[1], /\bstart="2"/);
+});
+
+test('preserves ordered list numbering after an intervening image block in recruit wechat mode', () => {
+  const html = renderPreview('recruit');
   const orderedLists = html.match(/<ol\b[^>]*>/g) ?? [];
 
   assert.equal(orderedLists.length, 2);
