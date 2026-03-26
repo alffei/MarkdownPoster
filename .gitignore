@@ -30,3 +30,5 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+universal_backend_service-main

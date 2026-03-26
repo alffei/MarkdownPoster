@@ -19,6 +19,21 @@ import { useProjectExport } from './hooks/useProjectExport';
 import { ThemeRegistry } from './utils/themeRegistry';
 import { repairMarkdownBlock } from './utils/markdownRepair';
 import { getDefaultWeChatConfig, normalizeWeChatConfig } from './config/wechatTemplates';
+import {
+  addAuthChangeListener,
+  AuthUser,
+  clearSsoCallbackParams,
+  exchangeSsoCode,
+  extractSsoCallbackParams,
+  fetchCreditBalance,
+  getStoredUser,
+  isStoredSessionExpired,
+  logoutFromUniversalBackend,
+  readStoredSession,
+  startSsoLogin,
+  tryRestoreSession,
+} from './services/authService';
+import { addCreditBalanceListener } from './services/geminiService';
 // @ts-ignore
 import JSZip from 'jszip';
 
@@ -319,6 +334,8 @@ type TemplateContext = {
   selectionEnd: number;
 };
 
+type AuthStatus = 'anonymous' | 'authenticated';
+
 const loadPosterTemplateTweaks = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_POSTER_TEMPLATE_TWEAKS);
@@ -469,6 +486,13 @@ export default function App() {
 
   // 12) 弹窗状态
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(() =>
+    readStoredSession()?.accessToken ? 'authenticated' : 'anonymous'
+  );
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => getStoredUser());
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [isAuthBusy, setIsAuthBusy] = useState(false);
 
   // 13) 当前海报模板 + 每模板微调快照
   const [activePosterTemplateId, setActivePosterTemplateId] = useState<string>(() => {
@@ -585,6 +609,85 @@ export default function App() {
       console.warn("LocalStorage quota exceeded.", e);
     }
   }, [imagePool]);
+
+  const syncAuthState = useCallback(() => {
+    const session = readStoredSession();
+    setAuthStatus(session?.accessToken ? 'authenticated' : 'anonymous');
+    setAuthUser(session?.user ?? null);
+    if (!session?.accessToken) {
+      setCreditBalance(null);
+    }
+  }, []);
+
+  const refreshCreditSnapshot = useCallback(async () => {
+    try {
+      const snapshot = await fetchCreditBalance();
+      setCreditBalance(snapshot.balance);
+      return snapshot.balance;
+    } catch {
+      setCreditBalance(null);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    syncAuthState();
+
+    let active = true;
+    const bootstrapAuth = async () => {
+      setIsAuthBusy(true);
+      try {
+        const callback = extractSsoCallbackParams();
+        if (callback) {
+          await exchangeSsoCode(callback.code, callback.state);
+          if (!active) return;
+          syncAuthState();
+          clearSsoCallbackParams(callback.url);
+          setRepairNotice({ message: '登录成功，可直接使用 AI 功能', id: Date.now() });
+          await refreshCreditSnapshot();
+          return;
+        }
+
+        const existingSession = readStoredSession();
+        if (existingSession?.accessToken && !isStoredSessionExpired()) {
+          syncAuthState();
+          await refreshCreditSnapshot();
+          return;
+        }
+
+        const restored = await tryRestoreSession();
+        if (!active) return;
+        if (restored?.accessToken) {
+          syncAuthState();
+          await refreshCreditSnapshot();
+        } else {
+          setCreditBalance(null);
+        }
+      } catch (error) {
+        console.error('Auth bootstrap failed', error);
+        setRepairNotice({ message: '登录恢复失败，请稍后重试', id: Date.now() });
+      } finally {
+        if (active) {
+          setIsAuthBusy(false);
+        }
+      }
+    };
+
+    bootstrapAuth();
+
+    const removeAuthListener = addAuthChangeListener(() => {
+      syncAuthState();
+    });
+    const removeCreditListener = addCreditBalanceListener(balance => {
+      setCreditBalance(balance);
+    });
+
+    return () => {
+      active = false;
+      removeAuthListener();
+      removeCreditListener();
+    };
+  }, [refreshCreditSnapshot, syncAuthState]);
 
   // ---------------------------
 
@@ -1711,6 +1814,36 @@ export default function App() {
     }
   };
 
+  const handleLogin = useCallback(async () => {
+    setIsAuthBusy(true);
+    try {
+      await startSsoLogin();
+    } catch (error) {
+      console.error('Failed to start SSO login', error);
+      setRepairNotice({ message: '登录入口暂时不可用，请稍后重试', id: Date.now() });
+      setIsAuthBusy(false);
+    }
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    setIsAuthBusy(true);
+    try {
+      await logoutFromUniversalBackend();
+      setCreditBalance(null);
+      setRepairNotice({ message: '已退出当前应用登录', id: Date.now() });
+      syncAuthState();
+    } catch (error) {
+      console.error('Logout failed', error);
+      setRepairNotice({ message: '退出失败，请稍后重试', id: Date.now() });
+    } finally {
+      setIsAuthBusy(false);
+    }
+  }, [syncAuthState]);
+
+  const handleAuthRequired = useCallback(() => {
+    setIsLoginModalOpen(true);
+  }, []);
+
   const handleResetClick = useCallback(() => setIsResetModalOpen(true), []);
   const confirmReset = useCallback(() => {
     setMarkdown(DEFAULT_MARKDOWN);
@@ -1777,13 +1910,19 @@ export default function App() {
     <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#23272e]' : 'bg-white'}`}>
       
       <div className="relative z-50">
-         <Toolbar 
+          <Toolbar 
             isDarkMode={isDarkMode} 
             onToggleTheme={toggleTheme}
             onSaveMarkdown={handleDownloadMarkdown}
             onExportZip={handleExportZip}
             isExportingZip={isExportingZip}
             viewMode={viewMode}
+            authStatus={authStatus}
+            authUser={authUser}
+            creditBalance={creditBalance}
+            isAuthBusy={isAuthBusy}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
          />
       </div>
 
@@ -2179,6 +2318,7 @@ export default function App() {
             showTabs={false}
             onApply={handleApplyTemplateResult}
             onClose={() => setIsTemplatePopoverOpen(false)}
+            onAuthRequired={handleAuthRequired}
             onDragStart={startSmartPanelDrag}
           />
         </div>
@@ -2194,6 +2334,18 @@ export default function App() {
         isDarkMode={isDarkMode}
         confirmText="彻底清空"
         cancelText="我再想想"
+      />
+
+      <ConfirmationModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onConfirm={handleLogin}
+        title="AI 功能需要登录"
+        message="普通编辑和预览可以继续匿名使用；调用 AI 排版、识诗和插图生成功能前，需要先通过 RRZXS SSO 登录。"
+        isDarkMode={isDarkMode}
+        confirmText="去登录"
+        cancelText="暂不登录"
+        confirmVariant="primary"
       />
     </div>
   );

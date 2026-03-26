@@ -13,6 +13,7 @@ interface ConfirmationModalProps {
   isDarkMode: boolean;
   confirmText?: string;
   cancelText?: string;
+  confirmVariant?: 'danger' | 'primary';
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -23,7 +24,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   message,
   isDarkMode,
   confirmText = "确定",
-  cancelText = "取消"
+  cancelText = "取消",
+  confirmVariant = 'danger',
 }) => {
   const [visible, setVisible] = useState(false);
 
@@ -38,8 +40,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   if (!visible && !isOpen) return null;
 
+  const confirmClassName = confirmVariant === 'primary'
+    ? 'px-4 py-2 text-sm font-bold text-white bg-[#0d6f66] hover:bg-[#0b6159] rounded-lg shadow-sm active:scale-95 transition-all'
+    : 'px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm active:scale-95 transition-all';
+
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`fixed inset-0 z-[200] flex items-center justify-center p-4 transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
       {/* 背景遮罩 */}
       <div 
         className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
@@ -77,7 +83,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               onConfirm();
               onClose();
             }}
-            className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-sm active:scale-95 transition-all"
+            className={confirmClassName}
           >
             {confirmText}
           </button>

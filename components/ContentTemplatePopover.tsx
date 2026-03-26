@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AiAction } from '../types';
 import { generateIllustrationWithAi, inferPoemMetaWithAi, processMarkdownWithAi } from '../services/geminiService';
 import { EVENT_POSTER_TEMPLATE, ILLUSTRATION_STYLE_PROMPT } from '../config/aiTemplates';
+import { isAuthError } from '../services/authService';
 
 export type TemplateApplyMode = 'replace' | 'insert' | 'append';
 export type TemplateKind = 'semantic' | 'event' | 'poem' | 'illustration';
@@ -24,6 +25,7 @@ interface ContentTemplatePopoverProps {
   showTabs?: boolean;
   onApply: (result: string, mode: TemplateApplyMode, options?: TemplateApplyOptions) => void;
   onClose: () => void;
+  onAuthRequired?: () => void;
   onDragStart?: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
@@ -151,6 +153,7 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
   showTabs = true,
   onApply,
   onClose,
+  onAuthRequired,
   onDragStart,
 }) => {
   const [activeTemplate, setActiveTemplate] = useState<TemplateKind>(initialTemplate ?? 'semantic');
@@ -233,6 +236,11 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
         );
         setIllustrationPreviewUrl(imageResult.dataUrl);
       } catch (err) {
+        if (isAuthError(err)) {
+          onAuthRequired?.();
+          setError('AI 功能需要登录后使用');
+          return;
+        }
         console.error('插图生成失败', err);
         setError(toReadableError('插图生成失败', err));
       } finally {
@@ -255,6 +263,11 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
       const result = await processMarkdownWithAi(sourceText, action);
       setOutput(result.trim());
     } catch (err) {
+      if (isAuthError(err)) {
+        onAuthRequired?.();
+        setError('AI 功能需要登录后使用');
+        return;
+      }
       console.error('内容生成失败', err);
       setError(toReadableError('生成失败', err));
     } finally {
@@ -315,6 +328,11 @@ export const ContentTemplatePopover: React.FC<ContentTemplatePopoverProps> = ({
       if (normalizedTitle && meta.author) return `${normalizedTitle} - ${meta.author}`;
       return normalizedTitle || meta.author || '';
     } catch (err) {
+      if (isAuthError(err)) {
+        onAuthRequired?.();
+        setError('AI 功能需要登录后使用');
+        return '';
+      }
       console.error(err);
       setError(toReadableError('诗名/作者识别失败', err));
       return '';

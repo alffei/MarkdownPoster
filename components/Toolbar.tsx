@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { ViewMode } from '../types';
 import logoUrl from '../assets/logo.png';
+import { AuthUser } from '../services/authService';
 
 interface ToolbarProps {
   isDarkMode: boolean;
@@ -13,6 +14,12 @@ interface ToolbarProps {
   onExportZip: () => void;
   isExportingZip: boolean;
   viewMode: ViewMode;
+  authStatus: 'anonymous' | 'authenticated';
+  authUser: AuthUser | null;
+  creditBalance: number | null;
+  isAuthBusy: boolean;
+  onLogin: () => void;
+  onLogout: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -21,8 +28,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSaveMarkdown, 
   onExportZip,
   isExportingZip,
-  viewMode
+  viewMode,
+  authStatus,
+  authUser,
+  creditBalance,
+  isAuthBusy,
+  onLogin,
+  onLogout,
 }) => {
+  const authLabel = authUser?.name?.trim() || authUser?.email?.trim() || '已登录';
+
   return (
     <div className={`flex flex-col sm:flex-row justify-between items-center p-3 px-6 gap-4 z-50 sticky top-0 transition-colors duration-300 
       ${isDarkMode 
@@ -54,7 +69,43 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <div className={`hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 text-xs border transition-colors ${
+          isDarkMode
+            ? 'bg-[#15181d] border-[#2c313a] text-[#c7cdd8]'
+            : 'bg-[#faf7f1] border-[#e7dfd2] text-[#5f5a52]'
+        }`}>
+          {authStatus === 'authenticated' ? (
+            <>
+              <span className="font-semibold">{authLabel}</span>
+              <span className={`opacity-50 ${isDarkMode ? 'text-[#5c6370]' : 'text-[#b0a79a]'}`}>|</span>
+              <span>积分 {creditBalance ?? '--'}</span>
+              <button
+                type="button"
+                onClick={onLogout}
+                className={`ml-1 rounded-md px-2 py-1 transition-colors ${
+                  isDarkMode ? 'hover:bg-[#2c313a] text-[#e5c07b]' : 'hover:bg-white text-[#0d6f66]'
+                }`}
+              >
+                退出
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onLogin}
+              disabled={isAuthBusy}
+              className={`rounded-md px-2 py-1 font-semibold transition-colors ${
+                isDarkMode
+                  ? 'text-[#e5c07b] hover:bg-[#2c313a] disabled:text-[#5c6370]'
+                  : 'text-[#0d6f66] hover:bg-white disabled:text-gray-400'
+              }`}
+            >
+              {isAuthBusy ? '检查登录中...' : '登录'}
+            </button>
+          )}
+        </div>
+
         {/* 保存/导出按钮已迁移到 PreviewControlBar */}
 
         {/* 主题切换按钮 */}
