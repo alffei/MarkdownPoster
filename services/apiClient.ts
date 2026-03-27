@@ -9,14 +9,13 @@ import {
   isAuthError,
   refreshAccessToken,
 } from './authService';
+import { resolveUniversalApiBase } from './universalConfig';
 
 type ErrorDetail = string | { detail?: unknown; message?: unknown; error_code?: unknown } | null;
 
 const env = (import.meta as { env?: Record<string, string> }).env ?? {};
 
-const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, '');
-
-const getApiBase = () => normalizeBaseUrl(String(env.VITE_RRZXS_API_BASE || '/api/v1').trim() || '/api/v1');
+const getApiBase = () => resolveUniversalApiBase(env);
 
 const buildUrl = (path: string) => {
   if (/^https?:\/\//i.test(path)) return path;
