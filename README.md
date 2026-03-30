@@ -53,11 +53,11 @@ MarkdownPoster 是一个面向内容编辑与排版的前端应用，用于把 M
 - 导入 ZIP 项目包并恢复图片引用
 
 ### 6. AI 能力与后端接入
+> 需要登录使用
 
-- AI 功能统一经 RRZXS 通用后端代理
-- 登录、换票、刷新、登出、会话恢复
-- 积分查询与扣减
-- 请求超时控制、401 自动刷新、幂等键生成
+- 插图生成
+- 语义格式（markdown 格式自动化调整）
+- 竖排诗（一个诡异的功能）  
 
 ### 7. 外部页面导入 SDK
 
@@ -69,6 +69,8 @@ MarkdownPoster 是一个面向内容编辑与排版的前端应用，用于把 M
 ## 外部接入
 
 这一部分用于说明第三方页面如何拉起 MarkdownPoster，并把 Markdown 内容导入编辑器。
+> 参考：[mdp-sdk-deploy-guide.md](./mdp-sdk-deploy-guide.md)
+
 ### 1. 当前固定部署路径
 
 当项目部署在 `https://rrzxs.com/mdp/` 时：
@@ -145,6 +147,7 @@ location ^~ /mdp/ {
 - `https://rrzxs.com/mdp/import` 可访问
 - `https://rrzxs.com/mdp/sdk/markdownposter-open.v1.js` 可访问
 - 直接访问 URL 导入测试链接时，编辑区能看到导入内容
+
 
 
 
