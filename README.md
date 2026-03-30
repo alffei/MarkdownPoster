@@ -5,6 +5,11 @@ MarkdownPoster 是一个面向内容编辑与排版的前端应用，用于把 M
 - 海报图模式：适合生成长图、卡片图、朋友圈/社群传播图
 - 阅读模式：适合沉浸式阅读和内容整理
 - 公众号模式：适合生成接近微信公众号排版的预览与可复制 HTML
+ <img width="1934" height="961" alt="image" src="https://github.com/user-attachments/assets/a79d1a87-fc60-4c6c-9981-ae16b368e52d" />
+<img width="1938" height="964" alt="image" src="https://github.com/user-attachments/assets/bdd4d11d-87eb-415d-be18-2e9d5b6b9e7c" />
+
+<img width="1939" height="965" alt="image" src="https://github.com/user-attachments/assets/8b9eec66-250c-42ee-b919-7d0dda1a8474" />
+
 
 项目同时提供对外 SDK，支持第三方页面一键打开 MarkdownPoster 并导入 Markdown 内容。
 
