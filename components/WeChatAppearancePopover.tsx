@@ -3,7 +3,8 @@
  * 布局参考海报配置画面样式。
  */
 
-import React, { useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   WeChatConfig,
   WeChatFontStyleKind,
@@ -25,6 +26,7 @@ interface WeChatAppearancePopoverProps {
   setConfig: (config: WeChatConfig) => void;
   isDarkMode: boolean;
   onClose: () => void;
+  onNativeColorPickerActivityChange?: (active: boolean) => void;
   anchorSide?: 'left' | 'right';
 }
 
@@ -33,6 +35,18 @@ const detailToggleItems: { label: string; key: BooleanConfigKey }[] = [
   { label: '代码块行号', key: 'lineNumbers' },
   { label: '微信外链转底部引用', key: 'linkReferences' }
 ];
+
+const normalizeHex = (value: string) => {
+  const trimmed = value.trim();
+  const prefixed = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+  if (/^#([0-9a-fA-F]{3}){1,2}$/.test(prefixed)) {
+    if (prefixed.length === 4) {
+      return `#${prefixed[1]}${prefixed[1]}${prefixed[2]}${prefixed[2]}${prefixed[3]}${prefixed[3]}`.toUpperCase();
+    }
+    return prefixed.toUpperCase();
+  }
+  return null;
+};
 
 const WeChatTemplateThumbnail: React.FC<{
   template: WeChatTemplateKind;
@@ -55,14 +69,6 @@ const WeChatTemplateThumbnail: React.FC<{
       accentColor: '#07c160',
       topBarClass: isDarkMode ? 'border-b border-[#3e4451]' : 'border-b border-gray-100',
     },
-    guobi: {
-      frameClass: 'bg-[#f0ece6]',
-      cardClass: 'bg-[#f7f4ef] border border-[#dfd6ca]',
-      titleClass: 'text-[#4e463d]',
-      accentColor: '#D97757',
-      topBarClass: 'border-b border-[#dfd6ca]',
-      topLabel: 'GUOBI',
-    },
     spring: {
       frameClass: 'bg-[#f2f8ea]',
       cardClass: 'bg-[#fbfef7] border border-[#d8e8c5]',
@@ -71,13 +77,29 @@ const WeChatTemplateThumbnail: React.FC<{
       topBarClass: 'border-b border-[#d8e8c5]',
       topLabel: 'SPRING',
     },
+    summer: {
+      frameClass: 'bg-[#fff3e8]',
+      cardClass: 'bg-[#fffaf4] border border-[#ffd8bf]',
+      titleClass: 'text-[#c54f1f]',
+      accentColor: '#f97316',
+      topBarClass: 'border-b border-[#ffd8bf]',
+      topLabel: 'SUMMER',
+    },
+    guobi: {
+      frameClass: 'bg-[#f0ece6]',
+      cardClass: 'bg-[#f7f4ef] border border-[#dfd6ca]',
+      titleClass: 'text-[#4e463d]',
+      accentColor: '#D97757',
+      topBarClass: 'border-b border-[#dfd6ca]',
+      topLabel: 'AUTUMN',
+    },
     recruit: {
       frameClass: 'bg-[#f1f4fb]',
       cardClass: 'bg-white border border-black',
       titleClass: 'text-[#2a2624]',
       accentColor: '#6366f1',
       topBarClass: 'border-b border-black',
-      topLabel: 'FRAME',
+      topLabel: 'WINTER',
     },
   };
   const visual = visualMap[template];
@@ -120,8 +142,10 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   setConfig,
   isDarkMode,
   onClose,
+  onNativeColorPickerActivityChange,
   anchorSide = 'right'
 }) => {
+  const normalizedPrimaryColor = normalizeHex(config.primaryColor) || '#07C160';
   const typographyStyles = WECHAT_TYPOGRAPHY_STYLE_OPTIONS;
   const fontStyles = WECHAT_FONT_STYLE_OPTIONS;
   const colors = WeChatThemeRegistry.getColorPresets();
@@ -129,6 +153,8 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   const lineHeights = WeChatThemeRegistry.getLineHeights();
   const codeThemes = WeChatThemeRegistry.getCodeThemes();
   const captionTypes = WeChatThemeRegistry.getCaptionTypes();
+  const nativeColorAnchorRef = useRef<HTMLDivElement>(null);
+  const [nativeColorPanelRect, setNativeColorPanelRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   const updateConfig = <K extends keyof WeChatConfig>(key: K, value: WeChatConfig[K]) => {
     setConfig({ ...config, [key]: value });
@@ -191,6 +217,53 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
   const toggleConfig = (key: BooleanConfigKey) => {
     updateConfig(key, !Boolean(config[key]) as WeChatConfig[BooleanConfigKey]);
   };
+
+  const applyCustomColor = (nextHex: string) => {
+    const normalized = normalizeHex(nextHex);
+    if (!normalized) return;
+    updateConfig('primaryColor', normalized);
+  };
+
+  const isPresetColorActive = colors.some(
+    (preset) => preset.color.toLowerCase() === normalizedPrimaryColor.toLowerCase()
+  );
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncNativeColorPanelRect = () => {
+      const anchor = nativeColorAnchorRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      setNativeColorPanelRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    syncNativeColorPanelRect();
+    window.addEventListener('resize', syncNativeColorPanelRect);
+    window.addEventListener('scroll', syncNativeColorPanelRect, true);
+
+    return () => {
+      window.removeEventListener('resize', syncNativeColorPanelRect);
+      window.removeEventListener('scroll', syncNativeColorPanelRect, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    const anchor = nativeColorAnchorRef.current;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    setNativeColorPanelRect({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    });
+  }, [isDarkMode, normalizedPrimaryColor]);
 
   // Shared style tokens
   const rowClass = 'flex items-center justify-between py-2';
@@ -257,15 +330,16 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
 
 
   return (
-    <div
-      style={{ width: 'min(680px, calc(100vw - 16px))' }}
-      className={`absolute top-full mt-2 rounded-2xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 duration-200 select-none overflow-hidden
-      ${anchorSide === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
-      ${isDarkMode
-          ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50'
-          : 'bg-white border-gray-200 text-gray-800 shadow-gray-300/40'
-        }`}
-    >
+    <>
+      <div
+        style={{ width: 'min(680px, calc(100vw - 16px))' }}
+        className={`absolute top-full mt-2 rounded-2xl shadow-2xl border flex flex-col z-50 animate-in fade-in zoom-in-95 duration-200 select-none overflow-hidden
+        ${anchorSide === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
+        ${isDarkMode
+            ? 'bg-[#21252b] border-[#181a1f] text-gray-200 shadow-black/50'
+            : 'bg-white border-gray-200 text-gray-800 shadow-gray-300/40'
+          }`}
+      >
       {/* Header */}
       <div className={`flex justify-between items-center px-5 py-3.5 border-b ${isDarkMode ? 'border-[#3e4451]' : 'border-gray-100'}`}>
         <h3 className="text-sm font-bold opacity-90">公众号排版配置</h3>
@@ -284,7 +358,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
             <div className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-400'}`}>
               主题风格（模板）
             </div>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {WECHAT_TEMPLATE_OPTIONS.map((item) => {
                 const active = config.template === item.value;
                 return (
@@ -292,7 +366,7 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
                     key={item.value}
                     onClick={() => applyTemplate(item.value)}
                     title={item.summary}
-                    className={`group relative w-32 shrink-0 text-left transition-all duration-200 ${active ? 'scale-[1.02]' : 'hover:scale-[1.02]'}`}
+                    className={`group relative w-full min-w-0 text-left transition-all duration-200 ${active ? 'scale-[1.02]' : 'hover:scale-[1.02]'}`}
                   >
                     <WeChatTemplateThumbnail template={item.value} label={item.label} isActive={active} isDarkMode={isDarkMode} />
                   </button>
@@ -366,27 +440,42 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
               <SegGroup label="主题色与图注">
                 {/* Color row */}
                 <SegRow label="主题色">
-                  <div className="flex flex-wrap gap-2 justify-end">
-                    {colors.map((preset) => (
-                      <button
-                        key={preset.color}
-                        onClick={() => updateConfig('primaryColor', preset.color)}
-                        title={preset.label}
-                        className={`w-5 h-5 rounded-full shadow-sm transition-transform hover:scale-110 relative ${config.primaryColor.toLowerCase() === preset.color.toLowerCase()
-                          ? 'ring-2 ring-offset-2 ring-blue-400 scale-110'
-                          : 'border border-gray-100'
-                          } ${isDarkMode ? 'ring-offset-[#21252b] border-[#3e4451]' : 'ring-offset-white'}`}
-                        style={{ backgroundColor: preset.color }}
-                      />
-                    ))}
-                    <div className="relative w-5 h-5 rounded-full overflow-hidden shadow-sm border cursor-pointer hover:scale-110 transition-transform flex items-center justify-center bg-gradient-to-br from-red-400 via-green-400 to-blue-400">
-                      <input
-                        type="color"
-                        value={config.primaryColor}
-                        onChange={(e) => updateConfig('primaryColor', e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                        title="自定义颜色"
-                      />
+                  <div className={`flex flex-col gap-2 ${rightControlWidthClass}`}>
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {colors.map((preset) => (
+                        <button
+                          key={preset.color}
+                          onClick={() => applyCustomColor(preset.color)}
+                          title={preset.label}
+                          className={`w-5 h-5 rounded-full shadow-sm transition-transform hover:scale-110 relative ${config.primaryColor.toLowerCase() === preset.color.toLowerCase()
+                            ? 'ring-2 ring-offset-2 ring-blue-400 scale-110'
+                            : 'border border-gray-100'
+                            } ${isDarkMode ? 'ring-offset-[#21252b] border-[#3e4451]' : 'ring-offset-white'}`}
+                          style={{ backgroundColor: preset.color }}
+                        />
+                      ))}
+                      <div
+                        ref={nativeColorAnchorRef}
+                        title="自定义主题色"
+                        className={`relative h-5 w-5 rounded-full shadow-sm transition-transform hover:scale-110 ${
+                          isPresetColorActive
+                            ? (isDarkMode ? 'border border-[#3e4451]' : 'border border-gray-100')
+                            : `scale-110 ring-2 ring-offset-2 ring-blue-400 ${isDarkMode ? 'ring-offset-[#21252b]' : 'ring-offset-white'}`
+                        }`}
+                      >
+                        <div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            background: 'conic-gradient(from 180deg, #ff5f6d, #ffc371, #7ed957, #50c4ff, #7c4dff, #ff5f6d)',
+                          }}
+                        />
+                        <div
+                          className={`absolute inset-[3px] rounded-full ${
+                            isDarkMode ? 'border border-[#181a1f]' : 'border border-white'
+                          }`}
+                          style={{ backgroundColor: normalizedPrimaryColor }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </SegRow>
@@ -445,6 +534,36 @@ export const WeChatAppearancePopover: React.FC<WeChatAppearancePopoverProps> = (
 
         </div>
       </div>
-    </div>
+      </div>
+
+      {typeof document !== 'undefined' && nativeColorPanelRect && createPortal(
+        <div
+          className="fixed"
+          style={{
+            top: nativeColorPanelRect.top,
+            left: nativeColorPanelRect.left,
+            width: nativeColorPanelRect.width,
+            height: nativeColorPanelRect.height,
+            zIndex: 90,
+          }}
+        >
+          <input
+            type="color"
+            value={normalizedPrimaryColor}
+            onChange={(e) => applyCustomColor(e.target.value)}
+            onMouseDown={() => onNativeColorPickerActivityChange?.(true)}
+            onFocus={() => onNativeColorPickerActivityChange?.(true)}
+            onClick={() => onNativeColorPickerActivityChange?.(true)}
+            onBlur={() => {
+              window.setTimeout(() => onNativeColorPickerActivityChange?.(false), 150);
+            }}
+            className="h-full w-full cursor-pointer opacity-0"
+            title="自定义主题色"
+            aria-label="自定义主题色"
+          />
+        </div>,
+        document.body
+      )}
+    </>
   );
 };

@@ -20,6 +20,7 @@ import {
   remarkInspirationSections,
   remarkRecruitSections,
   remarkSpringSections,
+  remarkSummerSections,
 } from '../utils/markdownPlugins';
 import { RubyRender } from './RubyRender';
 import { normalizeQuotedEmphasis } from '../utils/markdownNormalize';
@@ -148,6 +149,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
       inspirationSections: remarkInspirationSections,
       recruitSections: remarkRecruitSections,
       springSections: remarkSpringSections,
+      summerSections: remarkSummerSections,
     };
     const plugins = [remarkGfm, remarkMath, remarkDirective, remarkRuby, remarkCenter];
     templateRender.remarkPluginKeys.forEach((key) => {
@@ -211,6 +213,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     const isInspirationTemplate = templateRender.blockquote.mode === 'inspiration-sections';
     const isRecruitTemplateMode = templateRender.blockquote.mode === 'recruit-sections';
     const isSpringTemplateMode = templateRender.blockquote.mode === 'spring-sections';
+    const isSummerTemplateMode = templateRender.blockquote.mode === 'summer-sections';
     const isEditorialTemplate = templateRender.blockquote.mode === 'editorial-accent';
     let inspirationCoverCount = 0;
 
@@ -353,7 +356,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         }
 
         // 行内代码使用主色的低透明背景，保持一致性
-        const isPillStyle = isInspirationTemplate || isSpringTemplateMode;
+        const isPillStyle = isInspirationTemplate || isSpringTemplateMode || isSummerTemplateMode;
         const inlineCodeBg = isPillStyle ? hexToRgba(config.primaryColor, 0.15) : hexToRgba(config.primaryColor, 0.1);
         const inlineCodeColor = config.primaryColor;
 
@@ -673,6 +676,48 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
             </h3>
           );
         }
+        if (isSummerTemplateMode) {
+          return (
+            <h3
+              style={{
+                ...themeStyle.h3,
+                fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                letterSpacing: '0.05em',
+                color: '#d95b1d',
+                fontFamily: fontStyleDef.headingFontFamily,
+              }}
+            >
+              <span
+                style={{
+                  position: 'relative',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #ffd166 0%, #f97316 100%)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 4px 10px ${hexToRgba(config.primaryColor, 0.25)}`,
+                  flexShrink: 0,
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fff7ed',
+                    display: 'inline-block',
+                  }}
+                />
+              </span>
+              <span>{children}</span>
+            </h3>
+          );
+        }
         return <h3 style={{ ...themeStyle.h3, fontSize: templateRender.headingSizeMode === 'keep-layout-h2-h3' ? ((themeStyle.h3 as any).fontSize || '16px') : headingSizes.h3, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h3>;
       },
       blockquote: ({ node, children }: any) => {
@@ -697,6 +742,10 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           (node as any)?.properties?.['data-spring-section'] ||
           (node as any)?.data?.hProperties?.['data-spring-section']
         );
+        const isSummerSection = Boolean(
+          (node as any)?.properties?.['data-summer-section'] ||
+          (node as any)?.data?.hProperties?.['data-summer-section']
+        );
         const isRecruitSection = Boolean(
           (node as any)?.properties?.['data-recruit-section'] ||
           (node as any)?.data?.hProperties?.['data-recruit-section']
@@ -714,6 +763,11 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         const springSectionTitle = String(
           (node as any)?.properties?.['data-spring-title'] ||
           (node as any)?.data?.hProperties?.['data-spring-title'] ||
+          ''
+        );
+        const summerSectionTitle = String(
+          (node as any)?.properties?.['data-summer-title'] ||
+          (node as any)?.data?.hProperties?.['data-summer-title'] ||
           ''
         );
 
@@ -1050,6 +1104,147 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
         }
 
+        if (templateRender.blockquote.mode === 'summer-sections' && isSummerSection) {
+          const headingText = summerSectionTitle || '章节';
+          const sectionChildren = childrenArray;
+
+          let sectionLastElementIndex = -1;
+          for (let i = sectionChildren.length - 1; i >= 0; i--) {
+            if (React.isValidElement(sectionChildren[i])) {
+              sectionLastElementIndex = i;
+              break;
+            }
+          }
+
+          return (
+            <section style={{ margin: '28px 0 22px' }}>
+              <section
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  marginBottom: '10px',
+                }}
+              >
+                <section
+                  style={{
+                    display: 'inline-flex',
+                    width: '100%',
+                  }}
+                >
+                  <section
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      maxWidth: '100%',
+                      overflow: 'hidden',
+                      borderRadius: '999px',
+                      padding: '12px 22px',
+                      background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.92)} 0%, #ef4444 100%)`,
+                      boxShadow: `0 12px 24px ${hexToRgba(config.primaryColor, 0.18)}`,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <section
+                      style={{
+                        position: 'absolute',
+                        right: '18px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, rgba(255, 239, 213, 0.95) 0%, rgba(255, 239, 213, 0.35) 48%, rgba(255, 239, 213, 0) 70%)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <section
+                      style={{
+                        position: 'relative',
+                        zIndex: 1,
+                        fontSize: '20px',
+                        color: '#ffffff',
+                        textAlign: 'center',
+                        letterSpacing: '2px',
+                        fontWeight: 700,
+                        lineHeight: 1.3,
+                        fontFamily: fontStyleDef.headingFontFamily,
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {headingText}
+                    </section>
+                  </section>
+                </section>
+              </section>
+              <section
+                style={{
+                  position: 'relative',
+                  marginTop: '14px',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  border: '1px solid #ffd6be',
+                  background: 'linear-gradient(180deg, #fff8f1 0%, #fff2e7 100%)',
+                  boxShadow: '0 12px 28px rgba(249, 115, 22, 0.08)',
+                }}
+              >
+                <section
+                  style={{
+                    position: 'absolute',
+                    right: '-12px',
+                    top: '-18px',
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255, 220, 128, 0.55) 0%, rgba(255, 220, 128, 0) 72%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'absolute',
+                    left: '-26px',
+                    bottom: '-38px',
+                    width: '140px',
+                    height: '140px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255, 184, 108, 0.26) 0%, rgba(255, 184, 108, 0) 74%)',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <section
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    padding: '22px 18px 18px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {sectionChildren.map((child, index) => {
+                    if (index === sectionLastElementIndex && React.isValidElement(child)) {
+                      const element = child as React.ReactElement<any>;
+                      return React.cloneElement(element, {
+                        style: {
+                          ...(element.props.style || {}),
+                          marginBottom: 0,
+                        },
+                      });
+                    }
+                    return child;
+                  })}
+                  <section
+                    style={{
+                      marginTop: '16px',
+                      height: '7px',
+                      borderRadius: '999px',
+                      background: 'linear-gradient(90deg, rgba(249, 115, 22, 0.9) 0%, rgba(255, 209, 102, 0.95) 55%, rgba(255, 255, 255, 0) 100%)',
+                    }}
+                  />
+                </section>
+              </section>
+            </section>
+          );
+        }
+
         const blockquoteText = readNodeText(childrenArray).trim();
         const hasWarningTone = /(?:⚠️?|❗|警告|风险|注意)/u.test(blockquoteText);
         const hasCheckTone = /(?:✅|✔️?|建议|推荐)/u.test(blockquoteText);
@@ -1092,6 +1287,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
               border: '1px solid #d9e8c7',
               borderLeft: `3px solid ${hexToRgba(config.primaryColor, 0.65)}`,
               background: '#f3faed',
+            } : {}),
+            ...(isSummerTemplateMode ? {
+              margin: '16px 0',
+              padding: '14px 16px',
+              borderRadius: '18px',
+              border: '1px solid #ffd6be',
+              borderLeft: `3px solid ${hexToRgba(config.primaryColor, 0.72)}`,
+              background: 'linear-gradient(180deg, #fff8f1 0%, #fff2e7 100%)',
             } : {}),
             ...(isRecruitTemplateMode ? {
               margin: '16px 0',

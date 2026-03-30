@@ -70,12 +70,12 @@ export enum WeChatTheme {
   Simple = 'Simple'
 }
 
-export type WeChatTemplateKind = 'basic' | 'guobi' | 'spring' | 'recruit';
+export type WeChatTemplateKind = 'basic' | 'guobi' | 'spring' | 'summer' | 'recruit';
 export type WeChatTypographyStyleKind = 'standard' | 'classic' | 'vibrant' | 'inspiration' | 'editorial';
 export type WeChatFontStyleKind = 'standard' | 'classic' | 'vibrant';
 
 export interface WeChatConfig {
-  template: WeChatTemplateKind; // Template mode: basic (generic) / guobi & spring (fixed structure)
+  template: WeChatTemplateKind; // Template mode: basic (generic) / fixed structure themes
   // Typography style controls markdown structure rendering (title/card/section behavior).
   typographyStyle: WeChatTypographyStyleKind;
   // Font style controls only font family & text flavor; does not change structure.

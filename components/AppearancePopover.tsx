@@ -392,27 +392,37 @@ export const AppearancePopover: React.FC<AppearancePopoverProps> = ({
 
                  {/* 主色调色器：仅支持改色的模板可用 */}
                  <div className="relative group flex items-center justify-center">
-                    <div className={`w-6 h-6 rounded-full border shadow-sm transition-all duration-300 flex items-center justify-center overflow-hidden
-                        ${isCustomizable 
-                            ? 'cursor-pointer hover:scale-110 ring-2 ring-offset-2 ring-transparent hover:ring-blue-400' 
+                    <div className={`relative h-6 w-6 rounded-full shadow-sm transition-all duration-300 overflow-hidden
+                        ${isCustomizable
+                            ? 'cursor-pointer hover:scale-110 ring-2 ring-offset-2 ring-transparent hover:ring-blue-400'
                             : 'cursor-not-allowed opacity-40 grayscale'
                         }
-                        ${isDarkMode ? 'ring-offset-[#21252b] border-gray-600' : 'ring-offset-white border-gray-300'}
-                    `}
-                    style={{ backgroundColor: isCustomizable ? customThemeColor : 'transparent' }}
-                    >
-                         {/* 不可改色时展示浅色图标，明确当前状态 */}
-                         {!isCustomizable && (
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                            </svg>
-                         )}
+                        ${isDarkMode ? 'ring-offset-[#21252b]' : 'ring-offset-white'}
+                    `}>
+                         <div
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                              background: 'conic-gradient(from 180deg, #ff5f6d, #ffc371, #7ed957, #50c4ff, #7c4dff, #ff5f6d)',
+                            }}
+                         />
+                         <div
+                            className={`absolute inset-[3px] rounded-full flex items-center justify-center ${
+                              isDarkMode ? 'border border-[#181a1f]' : 'border border-white'
+                            }`}
+                            style={{ backgroundColor: isCustomizable ? (customThemeColor || '#000000') : '#d1d5db' }}
+                         >
+                           {!isCustomizable && (
+                             <svg className="w-3 h-3 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                             </svg>
+                           )}
+                         </div>
                          {isCustomizable && (
                              <input 
                                 type="color" 
                                 value={customThemeColor || '#000000'}
                                 onChange={(e) => setCustomThemeColor?.(e.target.value)}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
                              />
                          )}
                     </div>

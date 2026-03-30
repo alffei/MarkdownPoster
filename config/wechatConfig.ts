@@ -19,6 +19,7 @@ colorPresets:
   - { color: '#6366f1', label: '睿智紫' }
   - { color: '#ec4899', label: '活力粉' }
   - { color: '#f59e0b', label: '暖阳橙' }
+  - { color: '#f97316', label: '盛夏橙' }
   - { color: '#ef4444', label: '中国红' }
   - { color: '#1f2937', label: '极简黑' }
 
@@ -380,7 +381,7 @@ layouts:
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------
-  # [Guobi] 果比（模板结构样式，排版风格按钮仅影响字体）
+  # [SpringFresh] 春序（模板结构样式，排版风格按钮仅影响字体）
   # ----------------------------------------------------------------------------
   - id: "SpringFresh"
     name: "春序"
@@ -424,6 +425,54 @@ layouts:
       hr:
         border: "0"
         borderTop: "1px solid rgba(65,117,5,0.32)"
+        margin: "2em 0"
+
+  # ----------------------------------------------------------------------------
+  # [SummerHeat] 夏天（模板结构样式，排版风格按钮仅影响字体）
+  # ----------------------------------------------------------------------------
+  - id: "SummerHeat"
+    name: "夏天"
+    styles:
+      h1:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.9em"
+        lineHeight: "1.36"
+        color: "#c54f1f"
+      h2:
+        fontWeight: "bold"
+        marginTop: "1.6em"
+        marginBottom: "0.8em"
+        lineHeight: "1.35"
+        color: "#ffffff"
+        textAlign: "center"
+        letterSpacing: "0.12em"
+        fontSize: "21px"
+      h3:
+        fontWeight: "bold"
+        marginTop: "1.2em"
+        marginBottom: "0.6em"
+        lineHeight: "1.9"
+        fontSize: "16px"
+        color: "#e86a24"
+      list:
+        color: "#5a4034"
+      blockquote:
+        margin: "18px 0"
+        padding: "14px 16px"
+        borderRadius: "18px"
+        borderLeft: "3px solid {{primary_0.72}}"
+        border: "1px solid #ffd6be"
+        background: "linear-gradient(180deg, #fff8f1 0%, #fff2e7 100%)"
+        color: "#5a4034"
+      link:
+        color: "#d95b1d"
+        fontWeight: "bold"
+        textDecoration: "none"
+      hr:
+        border: "0"
+        height: "1px"
+        background: "linear-gradient(90deg, {{primary_0.72}} 0%, rgba(255, 205, 136, 0.85) 52%, rgba(255,255,255,0) 100%)"
         margin: "2em 0"
 
   # ----------------------------------------------------------------------------

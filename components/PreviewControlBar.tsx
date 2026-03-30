@@ -2,7 +2,7 @@
  * 模块说明：预览控制栏组件，管理模板应用与预览侧参数控制。
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BorderTheme, WritingTheme, FontSize, ViewMode, LayoutTheme, PaddingSize, WatermarkAlign, WeChatConfig, SpacingLevel, PosterTemplate } from '../types';
 import { AppearancePopover } from './AppearancePopover';
 import { WeChatAppearancePopover } from './WeChatAppearancePopover';
@@ -126,19 +126,42 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
   onToggleEditorCollapse
 }) => {
   const [showAppearance, setShowAppearance] = useState(false);
+  const [isWeChatColorPickerActive, setIsWeChatColorPickerActive] = useState(false);
   const [notification, setNotification] = useState<NotificationState | null>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
 
-  // 点击外部区域时关闭弹层
+  const closeAppearance = () => {
+    setIsWeChatColorPickerActive(false);
+    setShowAppearance(false);
+  };
+
+  const toggleAppearance = () => {
+    if (viewMode === ViewMode.WeChat && isWeChatColorPickerActive) {
+      return;
+    }
+    setShowAppearance((prev) => !prev);
+  };
+
+  // 使用统一的遮罩层关闭弹层，避免原生颜色选择器与 document 级事件冲突
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setShowAppearance(false);
+    if (!showAppearance) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeAppearance();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showAppearance]);
+
+  useEffect(() => {
+    if (viewMode === ViewMode.WeChat && isWeChatColorPickerActive && !showAppearance) {
+      setShowAppearance(true);
+    }
+  }, [isWeChatColorPickerActive, showAppearance, viewMode]);
 
   // 成功提示自动消失，避免长期占位
   useEffect(() => {
@@ -216,9 +239,17 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
         ? 'bg-[#1e2227] border-[#181a1f] text-[#abb2bf]' // Dark Mode
         : 'border-gray-200 bg-gray-50/90 backdrop-blur-sm text-gray-700'
       }`}>
+
+      {showAppearance && (viewMode === ViewMode.Poster || viewMode === ViewMode.Writing) && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-20 bg-transparent"
+          onMouseDown={closeAppearance}
+        />
+      )}
       
       {/* 左侧：外观设置入口 */}
-      <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2">
+      <div className={`absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 flex items-center gap-2 ${showAppearance ? 'z-30' : 'z-10'}`}>
         {onToggleEditorCollapse && (
           <button
             onClick={onToggleEditorCollapse}
@@ -246,9 +277,10 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
           </button>
         )}
         {(viewMode === ViewMode.Poster || viewMode === ViewMode.WeChat || viewMode === ViewMode.Writing) && (
-            <div className="relative" ref={popoverRef}>
+            <div className="relative">
                 <button
-                    onClick={() => setShowAppearance(!showAppearance)}
+                    type="button"
+                    onClick={toggleAppearance}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                         showAppearance 
                            ? (isDarkMode ? 'bg-[#2c313a] border-[#e5c07b] text-[#e5c07b]' : 'bg-white border-orange-400 text-orange-600')
@@ -278,7 +310,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         watermarkAlign={watermarkAlign}
                         setWatermarkAlign={setWatermarkAlign}
                         isDarkMode={isDarkMode}
-                        onClose={() => setShowAppearance(false)}
+                        onClose={closeAppearance}
                         customThemeColor={customThemeColor}
                         setCustomThemeColor={setCustomThemeColor}
                         onApplyTemplate={onApplyTemplate}
@@ -292,7 +324,8 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         config={weChatConfig}
                         setConfig={setWeChatConfig}
                         isDarkMode={isDarkMode}
-                        onClose={() => setShowAppearance(false)}
+                        onClose={closeAppearance}
+                        onNativeColorPickerActivityChange={setIsWeChatColorPickerActive}
                         anchorSide={appearanceAnchorSide}
                     />
                 )}
@@ -304,7 +337,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
                         fontSize={fontSize}
                         setFontSize={setFontSize}
                         isDarkMode={isDarkMode}
-                        onClose={() => setShowAppearance(false)}
+                        onClose={closeAppearance}
                         anchorSide={appearanceAnchorSide}
                     />
                 )}

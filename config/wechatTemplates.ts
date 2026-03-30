@@ -14,6 +14,7 @@ export type WeChatRemarkPluginKey =
   | 'guobiCards'
   | 'inspirationSections'
   | 'springSections'
+  | 'summerSections'
   | 'recruitSections';
 
 export interface WeChatTemplateRenderProfile {
@@ -41,7 +42,7 @@ export interface WeChatTemplateRenderProfile {
     itemMarginBottom: string;
   };
   blockquote: {
-    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections' | 'recruit-sections' | 'editorial-accent';
+    mode: 'theme-only' | 'card-aware-guobi' | 'inspiration-sections' | 'spring-sections' | 'summer-sections' | 'recruit-sections' | 'editorial-accent';
   };
 }
 
@@ -72,19 +73,24 @@ const TEMPLATE_DEFINITION_MAP: Record<WeChatTemplateKind, WeChatTemplateDefiniti
     label: '基础',
     summary: '通用页面结构，支持多种排版风格。',
   },
-  guobi: {
-    value: 'guobi',
-    label: '果比',
-    summary: '固定果比页面结构，保留专属卡片样式。',
-  },
   spring: {
     value: 'spring',
-    label: '春序',
+    label: '春',
     summary: '清新绿色专题模板，突出分节与装饰细节。',
+  },
+  summer: {
+    value: 'summer',
+    label: '夏',
+    summary: '暖阳橙红专题模板，强调横幅标题与暖色分节卡片。',
+  },
+  guobi: {
+    value: 'guobi',
+    label: '秋',
+    summary: '固定果比页面结构，保留专属卡片样式。',
   },
   recruit: {
     value: 'recruit',
-    label: '框线',
+    label: '冬',
     summary: '黑色框线与轻几何修饰，强调内容分区。',
   },
 };
@@ -235,6 +241,21 @@ const RECRUIT_DEFAULTS: Omit<WeChatConfig, 'template'> = {
   typographyStyle: 'standard',
   fontStyle: 'standard',
   primaryColor: '#6366f1',
+  codeTheme: 'vsLight',
+  macCodeBlock: false,
+  lineNumbers: false,
+  linkReferences: false,
+  indent: false,
+  justify: true,
+  captionType: 'none',
+  fontSize: 'Small',
+  lineHeight: 'comfortable',
+};
+
+const SUMMER_DEFAULTS: Omit<WeChatConfig, 'template'> = {
+  typographyStyle: 'standard',
+  fontStyle: 'vibrant',
+  primaryColor: '#f97316',
   codeTheme: 'vsLight',
   macCodeBlock: false,
   lineNumbers: false,
@@ -462,6 +483,48 @@ const SPRING_RENDER: WeChatTemplateRenderProfile = {
   },
 };
 
+const SUMMER_RENDER: WeChatTemplateRenderProfile = {
+  layoutMode: 'fixed',
+  fixedLayoutId: 'SummerHeat',
+  titleBlockMode: 'header-only',
+  headingSizeMode: 'keep-layout-h2-h3',
+  remarkPluginKeys: ['summerSections'],
+  commonText: {
+    letterSpacing: '0.08em',
+    color: '#5a4034',
+  },
+  image: {
+    sectionMargin: '14px 0',
+    wrapperRadius: '18px',
+    style: {
+      maxWidth: '100%',
+      height: 'auto',
+      display: 'block',
+      margin: '0 auto',
+      borderRadius: '18px',
+      border: '6px solid #fff8f1',
+      boxSizing: 'border-box',
+      boxShadow: '0 0 0 1px rgba(249, 115, 22, 0.14), 0 10px 24px rgba(249, 115, 22, 0.08)',
+    },
+  },
+  paragraph: {
+    style: {
+      color: '#5a4034',
+      lineHeight: '2.1',
+      letterSpacing: '0.08em',
+      margin: '10px 0',
+      minHeight: '1em',
+    },
+  },
+  list: {
+    blockMarginBottom: '14px',
+    itemMarginBottom: '0.45em',
+  },
+  blockquote: {
+    mode: 'summer-sections',
+  },
+};
+
 const RECRUIT_RENDER: WeChatTemplateRenderProfile = {
   layoutMode: 'fixed',
   fixedLayoutId: 'RecruitBlue',
@@ -508,6 +571,7 @@ const LEGACY_LAYOUT_TO_FONT_STYLE: Record<string, WeChatFontStyleKind> = {
   Classic: 'classic',
   Vibrant: 'vibrant',
   SpringFresh: 'standard',
+  SummerHeat: 'vibrant',
   RecruitBlue: 'standard',
   base: 'standard',
   classicLayout: 'classic',
@@ -523,6 +587,7 @@ const LEGACY_LAYOUT_TO_TYPOGRAPHY_STYLE: Record<string, WeChatTypographyStyleKin
   Vibrant: 'vibrant',
   EditorialWeChat: 'editorial',
   SpringFresh: 'standard',
+  SummerHeat: 'standard',
   RecruitBlue: 'standard',
   base: 'standard',
   standard: 'standard',
@@ -563,6 +628,9 @@ const normalizeTemplateValue = (value: unknown): {
   }
   if (value === 'springFresh') {
     return { template: 'spring' };
+  }
+  if (value === 'summerHeat') {
+    return { template: 'summer' };
   }
   if (value === 'recruitBlue') {
     return { template: 'recruit' };
@@ -634,6 +702,7 @@ export const getWeChatRenderProfile = (
 ): WeChatTemplateRenderProfile => {
   if (template === 'guobi') return GUOBI_RENDER;
   if (template === 'spring') return SPRING_RENDER;
+  if (template === 'summer') return SUMMER_RENDER;
   if (template === 'recruit') return RECRUIT_RENDER;
   if (typographyStyle === 'classic') return BASIC_CLASSIC_RENDER;
   if (typographyStyle === 'vibrant') return BASIC_VIBRANT_RENDER;
@@ -658,6 +727,14 @@ export const getWeChatTemplateDefaultConfig = (
     return {
       template,
       ...SPRING_DEFAULTS,
+      typographyStyle: 'standard',
+    };
+  }
+
+  if (template === 'summer') {
+    return {
+      template,
+      ...SUMMER_DEFAULTS,
       typographyStyle: 'standard',
     };
   }
