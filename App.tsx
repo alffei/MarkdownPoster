@@ -80,6 +80,13 @@ type EditorViewportSnapshot = {
   scrollLeft: number;
 };
 
+const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+  return fallback;
+};
+
 const decodeBase64UrlUtf8 = (encoded: string): string => {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/');
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -644,14 +651,14 @@ export default function App() {
           syncAuthState();
           clearSsoCallbackParams(callback.url);
           setRepairNotice({ message: '登录成功，可直接使用 AI 功能', id: Date.now() });
-          await refreshCreditSnapshot();
+          void refreshCreditSnapshot();
           return;
         }
 
         const existingSession = readStoredSession();
         if (existingSession?.accessToken && !isStoredSessionExpired()) {
           syncAuthState();
-          await refreshCreditSnapshot();
+          void refreshCreditSnapshot();
           return;
         }
 
@@ -659,13 +666,13 @@ export default function App() {
         if (!active) return;
         if (restored?.accessToken) {
           syncAuthState();
-          await refreshCreditSnapshot();
+          void refreshCreditSnapshot();
         } else {
           setCreditBalance(null);
         }
       } catch (error) {
         console.error('Auth bootstrap failed', error);
-        setRepairNotice({ message: '登录恢复失败，请稍后重试', id: Date.now() });
+        setRepairNotice({ message: resolveAuthErrorMessage(error, '登录恢复失败，请稍后重试'), id: Date.now() });
       } finally {
         if (active) {
           setIsAuthBusy(false);
@@ -1820,7 +1827,7 @@ export default function App() {
       await startSsoLogin();
     } catch (error) {
       console.error('Failed to start SSO login', error);
-      setRepairNotice({ message: '登录入口暂时不可用，请稍后重试', id: Date.now() });
+      setRepairNotice({ message: resolveAuthErrorMessage(error, '登录入口暂时不可用，请稍后重试'), id: Date.now() });
       setIsAuthBusy(false);
     }
   }, []);
@@ -1834,7 +1841,7 @@ export default function App() {
       syncAuthState();
     } catch (error) {
       console.error('Logout failed', error);
-      setRepairNotice({ message: '退出失败，请稍后重试', id: Date.now() });
+      setRepairNotice({ message: resolveAuthErrorMessage(error, '退出失败，请稍后重试'), id: Date.now() });
     } finally {
       setIsAuthBusy(false);
     }

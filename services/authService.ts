@@ -10,8 +10,14 @@ const STORAGE_KEY_AUTH_USER = 'mdp_auth_user';
 const STORAGE_KEY_STATE_TICKET = 'mdp_auth_state_ticket';
 const AUTH_CHANGE_EVENT = 'mdp-auth-changed';
 
-const DEFAULT_API_BASE = '/api/v1';
-const DEFAULT_APP_ID = 'mdp';
+import {
+  isLocalDevelopmentHost,
+  resolveRedirectUri,
+  resolveReturnTo,
+  resolveUniversalApiBase,
+  resolveUniversalAppId,
+} from './universalConfig';
+import { fetchWithTimeout } from './requestTimeout';
 
 export interface AuthUser {
   id: string;
@@ -68,18 +74,17 @@ export class AuthError extends Error {
 
 const isBrowser = () => typeof window !== 'undefined';
 
-const normalizeBaseUrl = (url: string) => url.replace(/\/+$/, '');
-
-const getApiBase = () => normalizeBaseUrl(String(env.VITE_RRZXS_API_BASE || DEFAULT_API_BASE).trim() || DEFAULT_API_BASE);
-
-export const getUniversalAppId = () => String(env.VITE_RRZXS_APP_ID || DEFAULT_APP_ID).trim() || DEFAULT_APP_ID;
+const getApiBase = () => resolveUniversalApiBase(env);
+export const getUniversalAppId = () => resolveUniversalAppId(env);
 
 export const getRedirectUri = () => {
-  const configured = String(env.VITE_RRZXS_REDIRECT_URI || '').trim();
-  if (configured) return configured;
   if (!isBrowser()) return '';
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}`;
+  return resolveRedirectUri(env, window.location);
+};
+
+export const getReturnTo = () => {
+  if (!isBrowser()) return '';
+  return resolveReturnTo(env, window.location, getRedirectUri());
 };
 
 const emitAuthChanged = () => {
@@ -132,12 +137,14 @@ const buildRequestUrl = (path: string) => {
 };
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(buildRequestUrl(path), {
+  const response = await fetchWithTimeout(buildRequestUrl(path), {
     credentials: 'include',
     ...init,
     headers: {
       ...(init?.headers || {}),
     },
+  }, {
+    timeoutMessage: '认证服务响应超时，请稍后重试',
   });
 
   const body = await parseJson<T | { detail?: unknown; message?: unknown; error_code?: unknown }>(response);
@@ -242,10 +249,20 @@ export const getStoredUser = () => readStoredSession()?.user || null;
 export const buildLoginUrl = async () => {
   const appId = getUniversalAppId();
   const redirectUri = getRedirectUri();
+  const returnTo = getReturnTo();
+
+  if (isBrowser() && isLocalDevelopmentHost(window.location) && !String(env.VITE_RRZXS_REDIRECT_URI || '').trim()) {
+    throw new AuthError(
+      'AUTH_REDIRECT_URI_REQUIRED',
+      '当前是本地开发地址，请先配置 VITE_RRZXS_REDIRECT_URI 为已加入白名单的线上回调地址，或改为在 rrzxs.com 同域地址联调。',
+      400
+    );
+  }
+
   const query = new URLSearchParams({
     app_id: appId,
     redirect_uri: redirectUri,
-    return_to: redirectUri,
+    return_to: returnTo || redirectUri,
   });
 
   const response = await requestJson<AuthorizeUrlResponse>(`/auth/sso/authorize-url?${query.toString()}`, {
@@ -343,31 +360,51 @@ export const clearSsoCallbackParams = (url?: URL) => {
 };
 
 export const fetchCreditBalance = async () => {
-  const session = readStoredSession();
+  const doFetch = async (accessToken: string) => {
+    const response = await fetchWithTimeout(buildRequestUrl('/credits/balance'), {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'X-App-Id': getUniversalAppId(),
+      },
+    }, {
+      timeoutMessage: '积分查询超时，请稍后重试',
+    });
+
+    const body = await parseJson<CreditBalanceSnapshot | { detail?: unknown; message?: unknown; error_code?: unknown }>(response);
+    if (!response.ok) {
+      const detail = body as ErrorDetail;
+      throw new AuthError(
+        parseErrorCode(detail, `HTTP_${response.status}`),
+        parseErrorMessage(detail, '积分查询失败'),
+        response.status
+      );
+    }
+    return body as CreditBalanceSnapshot;
+  };
+
+  let session = readStoredSession();
+  if (!session?.accessToken) {
+    session = await refreshAccessToken().catch(() => null);
+  }
   if (!session?.accessToken) {
     throw new AuthError('AUTH_LOGIN_REQUIRED', '请先登录后再查看积分');
   }
 
-  const response = await fetch(buildRequestUrl('/credits/balance'), {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      Authorization: `Bearer ${session.accessToken}`,
-      'X-App-Id': getUniversalAppId(),
-    },
-  });
+  try {
+    return await doFetch(session.accessToken);
+  } catch (error) {
+    if (!isAuthError(error) || error.status !== 401) {
+      throw error;
+    }
 
-  const body = await parseJson<CreditBalanceSnapshot | { detail?: unknown; message?: unknown; error_code?: unknown }>(response);
-  if (!response.ok) {
-    const detail = body as ErrorDetail;
-    throw new AuthError(
-      parseErrorCode(detail, `HTTP_${response.status}`),
-      parseErrorMessage(detail, '积分查询失败'),
-      response.status
-    );
+    const refreshed = await refreshAccessToken().catch(() => null);
+    if (!refreshed?.accessToken) {
+      throw new AuthError('AUTH_LOGIN_REQUIRED', '请先登录后再查看积分');
+    }
+    return doFetch(refreshed.accessToken);
   }
-  return body as CreditBalanceSnapshot;
 };
 
 export const isAuthError = (error: unknown): error is AuthError => error instanceof AuthError;
-
