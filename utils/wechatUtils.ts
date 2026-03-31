@@ -14,6 +14,16 @@ export interface WeChatCopyResult {
   errors: string[];
 }
 
+const describeImageForError = (img: HTMLImageElement | null | undefined, fallbackIndex: number): string => {
+  const originalSrc = readOriginalImageSrc(img);
+  if (originalSrc) return originalSrc;
+
+  const currentSrc = img?.getAttribute('src') || img?.src || '';
+  if (currentSrc) return currentSrc;
+
+  return `第 ${fallbackIndex + 1} 张图片`;
+};
+
 const waitForImageReady = (img: HTMLImageElement): Promise<void> => {
   if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
     return Promise.resolve();
@@ -109,6 +119,20 @@ const shouldMirrorHttpImage = (src: string): boolean => {
 const readOriginalImageSrc = (img: HTMLImageElement | null | undefined): string => {
   if (!img) return '';
   return img.getAttribute('data-mp-original-src') || '';
+};
+
+const assertLocalImageReady = (img: HTMLImageElement | null | undefined, fallbackIndex: number) => {
+  const originalSrc = readOriginalImageSrc(img);
+  if (!originalSrc.startsWith('local://')) return;
+
+  if (!img) {
+    throw new Error(`本地图片未找到：${originalSrc}`);
+  }
+
+  const currentSrc = img.getAttribute('src') || img.src || '';
+  if (!currentSrc || img.naturalWidth === 0 || img.naturalHeight === 0) {
+    throw new Error(`本地图片未加载成功：${describeImageForError(img, fallbackIndex)}`);
+  }
 };
 
 const CSS_URL_PATTERN = /url\((['"]?)(.*?)\1\)/g;
@@ -299,10 +323,17 @@ const stabilizeCodeBlocksForWeChat = (exportRoot: HTMLElement) => {
   });
 };
 
+const stripDecorativeNodesForWeChat = (exportRoot: HTMLElement) => {
+  exportRoot
+    .querySelectorAll('[data-mp-wechat-decorative="true"]')
+    .forEach((node) => node.remove());
+};
+
 const preprocessWeChatClone = (sourceContentNode: HTMLElement, cloneNode: HTMLElement) => {
   stabilizeKatexForWeChat(sourceContentNode, cloneNode);
   stabilizeRubyForWeChat(cloneNode);
   stabilizeCodeBlocksForWeChat(cloneNode);
+  stripDecorativeNodesForWeChat(cloneNode);
 };
 
 /**
@@ -364,6 +395,7 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
             // 场景 B/C/D：local://、blob URL 或同源静态资源，直接读取页面上已经加载好的图片像素，
             // 避免 fetch(blob:...) 被 CSP 拦截。
             else if ((originalSrc.startsWith('local://') || src.startsWith('blob:') || shouldMirrorHttpImage(src)) && sourceImg) {
+                assertLocalImageReady(sourceImg, index);
                 base64Data = await imageElementToDataUrl(sourceImg);
             } else if (originalSrc.startsWith('local://') || src.startsWith('blob:') || shouldMirrorHttpImage(src)) {
                 throw new Error('Source image element not found');
@@ -378,7 +410,7 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
         } catch (e: any) {
             console.error("Failed to process image for WeChat copy", e);
             failedCount++;
-            errors.push(`第 ${index + 1} 张图片处理失败：${e.message || "Unknown upload error"}`);
+            errors.push(`${describeImageForError(sourceImg || img, index)} 处理失败：${e.message || "Unknown upload error"}`);
             // 失败时保留原始 src，保证文本结构仍可复制。
         }
     }));

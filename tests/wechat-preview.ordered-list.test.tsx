@@ -19,7 +19,11 @@ const markdown = [
   '3. **第三条**：这里应该保持 3.',
 ].join('\n');
 
-const renderPreview = (template: 'basic' | 'recruit', typographyStyle: 'standard' | 'editorial' = 'standard') => {
+const renderPreview = (
+  template: 'basic' | 'recruit' | 'summer',
+  typographyStyle: 'standard' | 'editorial' = 'standard',
+  sourceMarkdown = markdown
+) => {
   const config = {
     ...getWeChatTemplateDefaultConfig(template, typographyStyle),
     primaryColor: '#07c160',
@@ -39,7 +43,7 @@ const renderPreview = (template: 'basic' | 'recruit', typographyStyle: 'standard
 
   return renderToStaticMarkup(
     <WeChatPreview
-      markdown={markdown}
+      markdown={sourceMarkdown}
       config={config as any}
       imagePool={{}}
       isDarkMode={false}
@@ -70,4 +74,23 @@ test('preserves ordered list numbering after an intervening image block in recru
 
   assert.equal(orderedLists.length, 2);
   assert.match(orderedLists[1], /\bstart="2"/);
+});
+
+test('renders standalone markdown images outside paragraph tags in wechat mode', () => {
+  const html = renderPreview('basic', 'standard');
+
+  assert.doesNotMatch(html, /<p\b[^>]*>\s*<section\b/i);
+  assert.doesNotMatch(html, /<\/section>\s*<\/p>/i);
+});
+
+test('renders summer sections without decorative placeholder nodes', () => {
+  const summerMarkdown = [
+    '## 夏日观察',
+    '',
+    '这一节用于触发夏天主题容器。',
+  ].join('\n');
+
+  const html = renderPreview('summer', 'standard', summerMarkdown);
+  assert.match(html, /夏日观察/);
+  assert.doesNotMatch(html, /data-mp-wechat-decorative="true"/);
 });

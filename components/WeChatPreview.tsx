@@ -70,6 +70,19 @@ const parseInspirationMarker = (text: string): { kind: InspirationMarkerKind; cl
   return { kind: 'none', cleanText: source };
 };
 
+const isImageOnlyParagraphNode = (node: any): boolean => {
+  if (!node || !Array.isArray(node.children)) return false;
+
+  const meaningfulChildren = node.children.filter((child: any) => {
+    if (child?.type === 'text') {
+      return String(child.value || '').trim().length > 0;
+    }
+    return true;
+  });
+
+  return meaningfulChildren.length === 1 && meaningfulChildren[0]?.tagName === 'img';
+};
+
 const SPRING_DECORATIVE_ASSETS = {
   titleBrush: './wechat-assets/spring-fresh/decorative/wx-spring-deco-title-brush-bg-v1.png',
   curveBottom: './wechat-assets/spring-fresh/decorative/wx-spring-deco-divider-wave-thin-v1.png',
@@ -402,6 +415,10 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         );
       },
       p: ({ node, children, ...props }: any) => {
+        if (isImageOnlyParagraphNode(node)) {
+          return <>{children}</>;
+        }
+
         const paragraphText = readNodeText(children).trim();
         const paragraphMarker = parseInspirationMarker(paragraphText);
         if (isInspirationTemplate && paragraphMarker.kind === 'idea') {
@@ -1146,21 +1163,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   >
                     <section
                       style={{
-                        position: 'absolute',
-                        right: '18px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '50%',
-                        background: 'radial-gradient(circle, rgba(255, 239, 213, 0.95) 0%, rgba(255, 239, 213, 0.35) 48%, rgba(255, 239, 213, 0) 70%)',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <section
-                      style={{
-                        position: 'relative',
-                        zIndex: 1,
                         fontSize: '20px',
                         color: '#ffffff',
                         textAlign: 'center',
@@ -1189,32 +1191,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
               >
                 <section
                   style={{
-                    position: 'absolute',
-                    right: '-12px',
-                    top: '-18px',
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255, 220, 128, 0.55) 0%, rgba(255, 220, 128, 0) 72%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <section
-                  style={{
-                    position: 'absolute',
-                    left: '-26px',
-                    bottom: '-38px',
-                    width: '140px',
-                    height: '140px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255, 184, 108, 0.26) 0%, rgba(255, 184, 108, 0) 74%)',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <section
-                  style={{
-                    position: 'relative',
-                    zIndex: 1,
                     padding: '22px 18px 18px',
                     boxSizing: 'border-box',
                   }}
@@ -1231,14 +1207,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     }
                     return child;
                   })}
-                  <section
-                    style={{
-                      marginTop: '16px',
-                      height: '7px',
-                      borderRadius: '999px',
-                      background: 'linear-gradient(90deg, rgba(249, 115, 22, 0.9) 0%, rgba(255, 209, 102, 0.95) 55%, rgba(255, 255, 255, 0) 100%)',
-                    }}
-                  />
                 </section>
               </section>
             </section>

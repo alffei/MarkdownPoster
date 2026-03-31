@@ -67,7 +67,19 @@ interface NotificationState {
   details?: string[];
 }
 
+const extractLocalImageFailureIds = (result: WeChatCopyResult): string[] => {
+  const ids = new Set<string>();
+
+  result.errors.forEach((entry) => {
+    const matches = entry.match(/local:\/\/[a-z0-9_]+/gi) || [];
+    matches.forEach((match) => ids.add(match));
+  });
+
+  return Array.from(ids);
+};
+
 const buildWeChatDiagnosticDetails = (result: WeChatCopyResult): string[] => {
+  const localImageIds = extractLocalImageFailureIds(result);
   const details = [
     `图片总数：${result.totalImages} 张`,
     `尝试上传图床：${result.attemptedUploads} 张`,
@@ -82,6 +94,10 @@ const buildWeChatDiagnosticDetails = (result: WeChatCopyResult): string[] => {
 
   if (result.failedImages > 0) {
     details.push('上传失败的图片会保留原始地址；如果原地址不是公众号可访问公网图，粘贴后大概率不显示。');
+  }
+
+  if (localImageIds.length > 0) {
+    details.push(`检测到 ${localImageIds.length} 张本地图片缺失：${localImageIds.join('、')}。这通常是跨浏览器、清空本地存储，或只粘贴 Markdown 文本未导入原项目图片数据导致。请重新上传这些图片，或导入原项目 zip。`);
   }
 
   return details.concat(result.errors);
@@ -184,6 +200,7 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
     if (!result) return;
 
     const diagnosticDetails = buildWeChatDiagnosticDetails(result);
+    const localImageIds = extractLocalImageFailureIds(result);
 
     if (result.success) {
        setNotification({
@@ -198,14 +215,18 @@ export const PreviewControlBar: React.FC<PreviewControlBarProps> = ({
           // 部分成功：正文复制成功，但部分图片上传失败
           setNotification({
              type: 'warning',
-             message: `复制成功，但有 ${result.failedImages} 张图片上传失败，成功 ${result.uploadedImages} 张。`,
+             message: localImageIds.length > 0
+               ? `复制成功，但有 ${localImageIds.length} 张本地图片缺失，成功 ${result.uploadedImages} 张。请在当前浏览器重新上传这些图片。`
+               : `复制成功，但有 ${result.failedImages} 张图片上传失败，成功 ${result.uploadedImages} 张。`,
              details: diagnosticDetails
           });
        } else if (result.failedImages > 0 && result.failedImages === result.totalImages) {
           // 图片全部失败：正文已复制，但图片均上传失败
            setNotification({
              type: 'error',
-             message: `复制成功，但尝试上传的图片全部失败（${result.failedImages} 张）。`,
+             message: localImageIds.length > 0
+               ? `复制成功，但 ${localImageIds.length} 张图片都是当前浏览器缺失的本地图片，未能上传。`
+               : `复制成功，但尝试上传的图片全部失败（${result.failedImages} 张）。`,
              details: diagnosticDetails
           });
        } else {
