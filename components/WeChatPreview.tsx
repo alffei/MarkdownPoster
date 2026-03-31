@@ -865,7 +865,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
               >
                 <section
                   style={{
-                    position: 'relative',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -876,37 +875,46 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     padding: '0 24px',
                   }}
                 >
-                  <span
+                  <section
                     style={{
-                      display: 'block',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
                       maxWidth: '100%',
-                      fontSize: 'clamp(16px, 2.5vw, 21px)',
-                      lineHeight: 1.24,
-                      letterSpacing: '0.6px',
-                      color: '#000000',
-                      fontWeight: 700,
-                      fontFamily: fontStyleDef.headingFontFamily,
-                      textAlign: 'center',
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    {headingText}
-                  </span>
-                  <span
-                    style={{
-                      position: 'absolute',
-                      left: '-10px',
-                      top: '4px',
-                      width: 0,
-                      height: 0,
-                      borderLeft: '12px solid transparent',
-                      borderRight: '34px solid transparent',
-                      borderBottom: `16px solid ${hexToRgba(config.primaryColor, 0.72)}`,
-                      transform: 'rotate(-8deg)',
-                      pointerEvents: 'none',
-                    }}
-                  />
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        flexShrink: 0,
+                        color: hexToRgba(config.primaryColor, 0.78),
+                        fontSize: '22px',
+                        lineHeight: 1,
+                        fontWeight: 700,
+                      }}
+                    >
+                      ▶
+                    </span>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        maxWidth: '100%',
+                        fontSize: 'clamp(16px, 2.5vw, 21px)',
+                        lineHeight: 1.24,
+                        letterSpacing: '0.6px',
+                        color: '#000000',
+                        fontWeight: 700,
+                        fontFamily: fontStyleDef.headingFontFamily,
+                        textAlign: 'center',
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {headingText}
+                    </span>
+                  </section>
                 </section>
               </section>
 
@@ -922,42 +930,46 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    justifyContent: 'space-between',
                     height: '34px',
                     padding: '0 14px',
                     borderBottom: '1px solid #000000',
                     backgroundColor: '#ffffff',
                   }}
                 >
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#000000' }} />
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#000000' }} />
-                </section>
-
-                <section
-                  style={{
-                    position: 'absolute',
-                    right: '-10px',
-                    top: '38px',
-                    width: '38px',
-                    height: '28px',
-                    background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.9)} 0%, ${config.primaryColor} 100%)`,
-                    transform: 'rotate(16deg)',
-                    boxShadow: `0 3px 8px ${hexToRgba(config.primaryColor, 0.26)}`,
-                    zIndex: 2,
-                  }}
-                >
                   <span
                     style={{
-                      position: 'absolute',
-                      left: '11px',
-                      top: '9px',
-                      width: '14px',
-                      height: '8px',
-                      borderLeft: '2px solid #fff',
-                      borderBottom: '2px solid #fff',
-                      transform: 'rotate(-35deg)',
+                      display: 'inline-block',
+                      color: '#000000',
+                      fontSize: '12px',
+                      lineHeight: 1,
+                      letterSpacing: '3px',
+                      fontWeight: 700,
+                      fontFamily: '"Helvetica Neue", Arial, sans-serif',
                     }}
-                  />
+                  >
+                    ●●
+                  </span>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '38px',
+                      height: '28px',
+                      flexShrink: 0,
+                      background: `linear-gradient(135deg, ${hexToRgba(config.primaryColor, 0.9)} 0%, ${config.primaryColor} 100%)`,
+                      transform: 'rotate(16deg)',
+                      boxShadow: `0 3px 8px ${hexToRgba(config.primaryColor, 0.26)}`,
+                      color: '#ffffff',
+                      fontSize: '18px',
+                      lineHeight: 1,
+                      fontWeight: 700,
+                      fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                    }}
+                  >
+                    ✓
+                  </span>
                 </section>
 
                 <section style={{ position: 'relative', zIndex: 1, padding: '16px 14px 16px' }}>
