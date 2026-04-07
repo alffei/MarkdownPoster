@@ -329,6 +329,115 @@ const stripDecorativeNodesForWeChat = (exportRoot: HTMLElement) => {
     .forEach((node) => node.remove());
 };
 
+const parseNumericCssValue = (value: string): number | null => {
+  if (!value) return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isLikelyGhostSvgNode = (node: HTMLElement): boolean => {
+  const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+  if (text.length > 0) return false;
+  if (node.querySelector('img, table, pre, code, video, audio, iframe, hr, ul, ol, li')) return false;
+
+  const svgNodes = node.querySelectorAll('svg');
+  if (svgNodes.length !== 1) return false;
+
+  const width = parseNumericCssValue(node.style.width);
+  const height = parseNumericCssValue(node.style.height);
+  const isSmallBox = width !== null && height !== null && width <= 40 && height <= 40;
+  if (!isSmallBox) return false;
+
+  const hasOverlaySignal =
+    Boolean(node.style.top || node.style.left || node.style.right || node.style.bottom) ||
+    node.style.opacity === '0' ||
+    node.style.cursor === 'pointer' ||
+    node.style.transition.includes('opacity');
+
+  return hasOverlaySignal;
+};
+
+const stripGhostSvgNodesForWeChat = (exportRoot: HTMLElement) => {
+  exportRoot.querySelectorAll<HTMLElement>('section, div, span').forEach((node) => {
+    if (isLikelyGhostSvgNode(node)) {
+      node.remove();
+    }
+  });
+};
+
+const isSimpleImageBlockCandidate = (node: HTMLElement): boolean => {
+  if (!['SECTION', 'DIV', 'P'].includes(node.tagName)) return false;
+
+  const childElements = Array.from(node.children) as HTMLElement[];
+  if (childElements.length === 0 || childElements.length > 2) return false;
+  if (node.querySelectorAll('img').length !== 1) return false;
+  if (!childElements[0]?.querySelector('img')) return false;
+
+  for (const child of childElements.slice(1)) {
+    if (child.querySelector('img')) return false;
+  }
+
+  if (node.querySelector('table, pre, code, video, audio, iframe')) return false;
+  return true;
+};
+
+const findSimpleImageBlockRoot = (
+  img: HTMLImageElement,
+  exportRoot: HTMLElement,
+): HTMLElement | null => {
+  let current = img.parentElement;
+  let candidate: HTMLElement | null = null;
+
+  while (current && current !== exportRoot) {
+    if (isSimpleImageBlockCandidate(current)) {
+      candidate = current;
+      current = current.parentElement;
+      continue;
+    }
+    break;
+  }
+
+  return candidate;
+};
+
+const normalizeImageBlocksForWeChat = (exportRoot: HTMLElement) => {
+  const normalizedBlocks = new Set<HTMLElement>();
+
+  exportRoot.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+    const block = findSimpleImageBlockRoot(img, exportRoot);
+    if (!block || normalizedBlocks.has(block)) return;
+    normalizedBlocks.add(block);
+
+    const childElements = Array.from(block.children) as HTMLElement[];
+    const captionNode = childElements[1] && !childElements[1].querySelector('img') ? childElements[1] : null;
+    const normalizedBlock = exportRoot.ownerDocument.createElement('p');
+
+    normalizedBlock.style.setProperty('margin', block.style.margin || '12px 0');
+    normalizedBlock.style.setProperty('text-align', block.style.textAlign || 'center');
+    normalizedBlock.style.setProperty('max-width', '100%');
+    normalizedBlock.style.setProperty('box-sizing', 'border-box');
+
+    img.style.setProperty('display', 'block');
+    img.style.setProperty('max-width', '100%');
+    if (!img.style.height || img.style.height === 'auto') {
+      img.style.setProperty('height', 'auto');
+    }
+    if (!img.style.margin) {
+      img.style.setProperty('margin', '0 auto');
+    }
+
+    normalizedBlock.appendChild(img);
+
+    if (captionNode) {
+      captionNode.style.setProperty('display', 'block');
+      captionNode.style.setProperty('margin-top', captionNode.style.marginTop || '0.6em');
+      normalizedBlock.appendChild(captionNode);
+    }
+
+    block.replaceWith(normalizedBlock);
+  });
+};
+
 const hasMeaningfulWeChatContent = (node: HTMLElement): boolean => {
   const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
   if (text.length > 0) return true;
@@ -361,6 +470,8 @@ const preprocessWeChatClone = (sourceContentNode: HTMLElement, cloneNode: HTMLEl
   stabilizeRubyForWeChat(cloneNode);
   stabilizeCodeBlocksForWeChat(cloneNode);
   stripDecorativeNodesForWeChat(cloneNode);
+  normalizeImageBlocksForWeChat(cloneNode);
+  stripGhostSvgNodesForWeChat(cloneNode);
   trimTrailingSpacingForWeChat(cloneNode);
 };
 

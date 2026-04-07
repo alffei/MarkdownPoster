@@ -1299,7 +1299,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         }
 
         return (
-          <section style={blockquoteStyle}>
+          <blockquote style={blockquoteStyle}>
             {childrenArray.map((child, index) => {
               // 仅最后一个有效节点去掉下边距，避免多余留白
               if (index === lastElementIndex && React.isValidElement(child)) {
@@ -1313,7 +1313,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
               }
               return child;
             })}
-          </section>
+          </blockquote>
         );
       },
       ul: ({ node, className, children }: any) => {

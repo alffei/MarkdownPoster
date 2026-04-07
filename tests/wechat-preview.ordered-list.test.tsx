@@ -20,7 +20,7 @@ const markdown = [
 ].join('\n');
 
 const renderPreview = (
-  template: 'basic' | 'recruit' | 'summer',
+  template: 'basic' | 'recruit' | 'summer' | 'guobi',
   typographyStyle: 'standard' | 'editorial' = 'standard',
   sourceMarkdown = markdown
 ) => {
@@ -93,4 +93,15 @@ test('renders summer sections without decorative placeholder nodes', () => {
   const html = renderPreview('summer', 'standard', summerMarkdown);
   assert.match(html, /夏日观察/);
   assert.doesNotMatch(html, /data-mp-wechat-decorative="true"/);
+});
+
+test('renders guobi cards with blockquote containers for better wechat compatibility', () => {
+  const guobiMarkdown = [
+    '## 果比卡片',
+    '',
+    '这一节用于触发秋主题容器。',
+  ].join('\n');
+
+  const html = renderPreview('guobi', 'standard', guobiMarkdown);
+  assert.match(html, /<blockquote\b[^>]*>/);
 });
