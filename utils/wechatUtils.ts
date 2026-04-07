@@ -329,11 +329,39 @@ const stripDecorativeNodesForWeChat = (exportRoot: HTMLElement) => {
     .forEach((node) => node.remove());
 };
 
+const hasMeaningfulWeChatContent = (node: HTMLElement): boolean => {
+  const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+  if (text.length > 0) return true;
+
+  return Boolean(
+    node.querySelector('img, table, pre, code, svg, video, audio, iframe, hr, ul, ol, li')
+  );
+};
+
+const trimTrailingSpacingForWeChat = (exportRoot: HTMLElement) => {
+  let lastChild = exportRoot.lastElementChild as HTMLElement | null;
+
+  // 复制到公众号后，尾部空节点会被编辑器放大成明显留白，先清掉。
+  while (lastChild && !hasMeaningfulWeChatContent(lastChild)) {
+    const previous = lastChild.previousElementSibling as HTMLElement | null;
+    lastChild.remove();
+    lastChild = previous;
+  }
+
+  // 最后一段内容常带有模板级 margin-bottom；在公众号草稿里容易表现为文末大块空白。
+  let current = lastChild;
+  while (current) {
+    current.style.setProperty('margin-bottom', '0');
+    current = current.lastElementChild as HTMLElement | null;
+  }
+};
+
 const preprocessWeChatClone = (sourceContentNode: HTMLElement, cloneNode: HTMLElement) => {
   stabilizeKatexForWeChat(sourceContentNode, cloneNode);
   stabilizeRubyForWeChat(cloneNode);
   stabilizeCodeBlocksForWeChat(cloneNode);
   stripDecorativeNodesForWeChat(cloneNode);
+  trimTrailingSpacingForWeChat(cloneNode);
 };
 
 /**
