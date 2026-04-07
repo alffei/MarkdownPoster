@@ -748,6 +748,7 @@ export default function App() {
   const wechatScrollRef = useRef<HTMLDivElement>(null);
   const isSyncingLeft = useRef(false);
   const isSyncingRight = useRef(false);
+  const suppressPreviewToEditorSyncUntilRef = useRef(0);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   const activePreviewRef = useMemo(() => {
@@ -926,6 +927,11 @@ export default function App() {
     }
   };
 
+  const suppressPreviewToEditorScrollSync = useCallback((durationMs = 220) => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    suppressPreviewToEditorSyncUntilRef.current = now + durationMs;
+  }, []);
+
   const handlePreviewScroll = (e: React.UIEvent<HTMLDivElement>) => {
     // 海报模式由画布接管，不参与滚动同步
     if (viewMode === ViewMode.Poster) return;
@@ -934,6 +940,10 @@ export default function App() {
     if (target.scrollTop > 300) setShowBackToTop(true);
     else setShowBackToTop(false);
 
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    // 编辑器驱动的重渲染会让预览区因 scroll anchoring 发生被动滚动；
+    // 这类滚动不应反向改写编辑器位置，否则会出现“输入时跳回旧位置”。
+    if (now < suppressPreviewToEditorSyncUntilRef.current) return;
     if (isSyncingLeft.current) return;
     const editor = textareaRef.current;
     if (editor) {
@@ -983,18 +993,20 @@ export default function App() {
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
+      suppressPreviewToEditorScrollSync();
       setHistoryIndex(newIndex);
       setMarkdown(history[newIndex]);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, suppressPreviewToEditorScrollSync]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
+      suppressPreviewToEditorScrollSync();
       setHistoryIndex(newIndex);
       setMarkdown(history[newIndex]);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, suppressPreviewToEditorScrollSync]);
 
   const captureEditorViewportSnapshot = (textarea: HTMLTextAreaElement | null = textareaRef.current): EditorViewportSnapshot | null => {
     if (!textarea) return null;
@@ -1017,6 +1029,7 @@ export default function App() {
     const newText = e.target.value;
     const viewportSnapshot = captureEditorViewportSnapshot(e.target);
     syncLiveEditorSelection(e.target);
+    suppressPreviewToEditorScrollSync();
     setMarkdown(newText);
     requestAnimationFrame(() => restoreEditorViewportSnapshot(viewportSnapshot));
     // 输入过程做防抖，避免每个按键都写入历史栈导致撤销粒度过碎。
@@ -1032,6 +1045,7 @@ export default function App() {
 
   const updateMarkdownImmediate = (newText: string) => {
     const viewportSnapshot = captureEditorViewportSnapshot();
+    suppressPreviewToEditorScrollSync();
     setMarkdown(newText);
     pushToHistory(newText);
     requestAnimationFrame(() => {
@@ -1065,6 +1079,7 @@ export default function App() {
       return false;
     }
     // 外部导入按“新会话”处理，重置历史栈基线，避免与旧文档撤销链混用。
+    suppressPreviewToEditorScrollSync();
     setMarkdown(incomingMarkdown);
     setHistory([incomingMarkdown]);
     setHistoryIndex(0);
@@ -1072,7 +1087,7 @@ export default function App() {
     setRepairNotice({ message: `已导入外部内容${sourceText}`, id: Date.now() });
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
     return true;
-  }, []);
+  }, [suppressPreviewToEditorScrollSync]);
 
   const getSmartPanelMetrics = useCallback((template: TemplateKind) => {
     if (template === 'illustration') {
@@ -1853,11 +1868,12 @@ export default function App() {
 
   const handleResetClick = useCallback(() => setIsResetModalOpen(true), []);
   const confirmReset = useCallback(() => {
+    suppressPreviewToEditorScrollSync();
     setMarkdown(DEFAULT_MARKDOWN);
     setHistory([DEFAULT_MARKDOWN]);
     setHistoryIndex(0);
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
-  }, []);
+  }, [suppressPreviewToEditorScrollSync]);
 
   // --- 格式工具栏横向滚动控制 ---
   const [formatCanScrollLeft, setFormatCanScrollLeft] = useState(false);
