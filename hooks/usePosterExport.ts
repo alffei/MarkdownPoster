@@ -17,6 +17,22 @@ interface UsePosterExportProps {
 export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }: UsePosterExportProps) => {
   const [isExporting, setIsExporting] = useState(false);
 
+  const resolveCopyErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message.trim()) {
+      return error.message.trim();
+    }
+
+    if (typeof error === 'object' && error && 'type' in error && error.type === 'error') {
+      return '导出图片资源失败，请检查页面中的图片是否已加载完成。';
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.clipboard?.write) {
+      return '当前浏览器不支持图片复制到剪贴板。';
+    }
+
+    return '复制图片失败，请刷新页面后重试。';
+  };
+
   const preparePosterForExport = async () => {
     // 导出前先做图片池回收，减少无用内存并避免旧图被误打包。
     const { cleanedPool, removedCount } = cleanImagePool(imagePool, markdown, 'Pre-Export');
@@ -88,9 +104,9 @@ export const usePosterExport = ({ exportRef, imagePool, setImagePool, markdown }
             new ClipboardItem({ [blob.type]: blob })
         ]);
         return { success: true };
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error("Copy failed", e);
-        return { success: false, message: e.message || "Unknown error" };
+        return { success: false, message: resolveCopyErrorMessage(e) };
     } finally {
         setIsExporting(false);
     }
