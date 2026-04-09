@@ -269,7 +269,7 @@ borderThemes:
     content: "bg-gray-900 text-pink-50"
     # Added explicit text-white for common elements to prevent black text issues
     prose: "prose-invert prose-headings:text-[var(--mp-primary-text)] prose-p:text-white/90 prose-li:text-white/90 prose-ul:text-white/90 prose-ol:text-white/90 prose-code:text-yellow-300 prose-blockquote:text-white/90 prose-blockquote:border-[var(--mp-secondary)] [&_td]:text-white/90 [&_th]:text-pink-400"
-    watermarkColor: "text-pink-900"
+    watermarkColor: "text-pink-300/70"
     colors:
       primary: "#e2e8f0"
       secondary: "#fb7185"

@@ -126,7 +126,10 @@ export const PaletteGallery: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className={`mt-3 text-center text-[10px] font-mono uppercase tracking-wide ${card.themeStyle.watermarkColor}`}>
+                  <div
+                    className={`mt-3 text-center text-[10px] font-mono uppercase tracking-wide ${card.themeStyle.watermarkColor}`}
+                    style={card.themeStyle.watermarkStyle}
+                  >
                     {card.theme.name} ({card.theme.id}) · {card.layoutId}
                   </div>
                 </div>

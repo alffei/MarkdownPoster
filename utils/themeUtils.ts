@@ -59,7 +59,15 @@ export const hexToRgba = (hex: string, alpha: number) => {
 }
 
 // 主题样式计算：支持用户主色覆盖与多层渐变派生
-export const getThemeStyles = (themeName: string, customColor?: string): ThemeDef & { frameStyle?: React.CSSProperties, cardStyle?: React.CSSProperties, colors?: ThemeColors } => {
+export const getThemeStyles = (
+    themeName: string,
+    customColor?: string
+): ThemeDef & {
+    frameStyle?: React.CSSProperties,
+    cardStyle?: React.CSSProperties,
+    colors?: ThemeColors,
+    watermarkStyle?: React.CSSProperties
+} => {
     const theme = ThemeRegistry.getBorderTheme(themeName);
     const baseTheme = theme || ThemeRegistry.getBorderTheme(ThemeRegistry.getDefaults().theme)!;
     
@@ -161,7 +169,11 @@ export const getThemeStyles = (themeName: string, customColor?: string): ThemeDe
                     borderColor: neonColor,
                     boxShadow: `0 0 30px ${glowColor}`
                 },
-                watermarkColor: `text-[${neonColor}] opacity-80` 
+                watermarkColor: 'opacity-80',
+                watermarkStyle: {
+                    color: neonColor,
+                    textShadow: `0 0 10px ${glowColor}`
+                }
             }
         }
     }

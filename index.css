@@ -191,4 +191,10 @@ rt {
 /* Poster mode: loosen multi-line title rhythm */
 #poster-node .prose h1 {
   line-height: 1.32;
+  margin-bottom: 0.52em;
+}
+
+/* Poster mode: keep adjacent H1/H2 compact enough for cover layouts */
+#poster-node .prose h1 + h2 {
+  margin-top: 0.52em;
 }

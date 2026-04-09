@@ -900,7 +900,10 @@ export const PosterPreview = forwardRef<HTMLDivElement, PosterPreviewProps>(({
                             </div>
 
                             {showWatermark && (
-                                <div className={`mt-6 z-10 ${watermarkAlign} ${themeStyle.watermarkColor}`}>
+                                <div
+                                  className={`mt-6 z-10 ${watermarkAlign} ${themeStyle.watermarkColor}`}
+                                  style={themeStyle.watermarkStyle}
+                                >
                                 <div className="text-sm font-medium opacity-80 font-sans tracking-wider">
                                     {watermarkText}
                                 </div>
