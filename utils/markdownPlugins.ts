@@ -161,10 +161,10 @@ export function remarkGuobiCards() {
   };
 
   const isSectionStart = (node: any): boolean => {
-    return Boolean(
-      (node?.type === 'heading' && node.depth === 2) ||
-      isMarkerParagraph(node)
-    );
+    if (node?.type === 'heading' && node.depth === 2) {
+      return extractText(node).trim().length > 0;
+    }
+    return isMarkerParagraph(node);
   };
 
   const createSectionHeading = (node: any) => {
@@ -256,7 +256,7 @@ export function remarkInspirationSections() {
 
     let sectionIndex = 0;
     tree.children = tree.children.map((node: any) => {
-      if (node?.type === 'heading' && node.depth === 2) {
+      if (node?.type === 'heading' && node.depth === 2 && extractText(node).trim().length > 0) {
         sectionIndex += 1;
         const rawTitle = extractText(node);
         const sectionTitle = normalizeTitle(rawTitle) || rawTitle.trim() || `章节 ${sectionIndex}`;
@@ -304,7 +304,9 @@ export function remarkSpringSections() {
       .trim()
   );
 
-  const isSectionStart = (node: any): boolean => node?.type === 'heading' && node.depth === 2;
+  const isSectionStart = (node: any): boolean => (
+    node?.type === 'heading' && node.depth === 2 && extractText(node).trim().length > 0
+  );
   const toPartIndex = (index: number): string => `PART.${String(index).padStart(2, '0')}`;
 
   return (tree: any) => {
@@ -377,7 +379,9 @@ export function remarkSummerSections() {
       .trim()
   );
 
-  const isSectionStart = (node: any): boolean => node?.type === 'heading' && node.depth === 2;
+  const isSectionStart = (node: any): boolean => (
+    node?.type === 'heading' && node.depth === 2 && extractText(node).trim().length > 0
+  );
   const toSectionIndex = (index: number): string => `SUMMER ${String(index).padStart(2, '0')}`;
 
   return (tree: any) => {
@@ -449,7 +453,9 @@ export function remarkRecruitSections() {
       .trim()
   );
 
-  const isSectionStart = (node: any): boolean => node?.type === 'heading' && node.depth === 2;
+  const isSectionStart = (node: any): boolean => (
+    node?.type === 'heading' && node.depth === 2 && extractText(node).trim().length > 0
+  );
   const toSectionIndex = (index: number): string => String(index).padStart(2, '0');
 
   return (tree: any) => {

@@ -164,20 +164,17 @@ type BackgroundAssetNode = {
   refs: CssUrlReference[];
 };
 
-const collectBackgroundAssetNodes = (sourceRoot: HTMLElement, exportRoot: HTMLElement): BackgroundAssetNode[] => {
-  const sourceNodes = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll<HTMLElement>('*'))];
+const collectBackgroundAssetNodes = (_sourceRoot: HTMLElement, exportRoot: HTMLElement): BackgroundAssetNode[] => {
   const exportNodes = [exportRoot, ...Array.from(exportRoot.querySelectorAll<HTMLElement>('*'))];
-  const nodeCount = Math.min(sourceNodes.length, exportNodes.length);
   const assets: BackgroundAssetNode[] = [];
 
-  for (let i = 0; i < nodeCount; i += 1) {
-    const sourceNode = sourceNodes[i];
+  for (let i = 0; i < exportNodes.length; i += 1) {
     const exportNode = exportNodes[i];
-    const backgroundImage = sourceNode.style.backgroundImage || exportNode.style.backgroundImage;
+    const backgroundImage = exportNode.style.backgroundImage;
     const refs = extractCssUrlReferences(backgroundImage);
     if (refs.length === 0) continue;
     assets.push({
-      source: sourceNode,
+      source: exportNode,
       clone: exportNode,
       backgroundImage,
       refs,
@@ -329,27 +326,35 @@ const stripDecorativeNodesForWeChat = (exportRoot: HTMLElement) => {
     .forEach((node) => node.remove());
 };
 
-const parseNumericCssValue = (value: string): number | null => {
-  if (!value) return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : null;
+const getNodeVisibleText = (node: HTMLElement): string =>
+  (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+
+const MEANINGFUL_WECHAT_SELECTOR = 'img, table, pre, code, video, audio, iframe, hr, ul, ol, li';
+const STRUCTURAL_CONTENT_SELECTOR = `${MEANINGFUL_WECHAT_SELECTOR}, svg`;
+const WECHAT_TAIL_ATTR = 'data-mp-wechat-tail';
+const WECHAT_PRESERVED_DECORATION_ATTR = 'data-mp-wechat-decoration';
+
+const isPreservedWeChatDecorationNode = (node: HTMLElement): boolean => (
+  node.getAttribute(WECHAT_PRESERVED_DECORATION_ATTR) === 'flow'
+);
+
+const hasOnlySvgElementChildren = (node: HTMLElement): boolean => {
+  const children = Array.from(node.children);
+  return children.length > 0 && children.every((child) => child.tagName.toLowerCase() === 'svg');
 };
 
 const isLikelyGhostSvgNode = (node: HTMLElement): boolean => {
-  const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+  const text = getNodeVisibleText(node);
   if (text.length > 0) return false;
-  if (node.querySelector('img, table, pre, code, video, audio, iframe, hr, ul, ol, li')) return false;
+  if (node.querySelector(MEANINGFUL_WECHAT_SELECTOR)) return false;
 
-  const svgNodes = node.querySelectorAll('svg');
-  if (svgNodes.length !== 1) return false;
-
-  const width = parseNumericCssValue(node.style.width);
-  const height = parseNumericCssValue(node.style.height);
-  const isSmallBox = width !== null && height !== null && width <= 40 && height <= 40;
-  if (!isSmallBox) return false;
+  if (!hasOnlySvgElementChildren(node)) return false;
 
   const hasOverlaySignal =
     Boolean(node.style.top || node.style.left || node.style.right || node.style.bottom) ||
+    node.style.position === 'absolute' ||
+    node.style.position === 'fixed' ||
+    node.style.pointerEvents === 'none' ||
     node.style.opacity === '0' ||
     node.style.cursor === 'pointer' ||
     node.style.transition.includes('opacity');
@@ -360,6 +365,53 @@ const isLikelyGhostSvgNode = (node: HTMLElement): boolean => {
 const stripGhostSvgNodesForWeChat = (exportRoot: HTMLElement) => {
   exportRoot.querySelectorAll<HTMLElement>('section, div, span').forEach((node) => {
     if (isLikelyGhostSvgNode(node)) {
+      node.remove();
+    }
+  });
+};
+
+const hasNegativeOffset = (node: HTMLElement): boolean => (
+  [node.style.top, node.style.right, node.style.bottom, node.style.left].some((value) => value.trim().startsWith('-'))
+);
+
+const isLikelyPositionedDecorationNode = (node: HTMLElement): boolean => {
+  if (getNodeVisibleText(node).length > 0) return false;
+  if (node.querySelector(STRUCTURAL_CONTENT_SELECTOR)) return false;
+
+  const isPositioned = node.style.position === 'absolute' || node.style.position === 'fixed';
+  if (!isPositioned && !hasNegativeOffset(node)) return false;
+
+  return (
+    node.style.pointerEvents === 'none' ||
+    Boolean(node.style.opacity) ||
+    hasNegativeOffset(node) ||
+    Boolean(node.style.zIndex)
+  );
+};
+
+const isLikelyPositionedDecorativeImage = (img: HTMLImageElement): boolean => {
+  const isHiddenFromA11y = img.getAttribute('aria-hidden') === 'true' || img.getAttribute('alt') === '';
+  if (!isHiddenFromA11y) return false;
+
+  const isPositioned = img.style.position === 'absolute' || img.style.position === 'fixed';
+  if (!isPositioned && !hasNegativeOffset(img)) return false;
+
+  return (
+    img.style.pointerEvents === 'none' ||
+    Boolean(img.style.opacity) ||
+    hasNegativeOffset(img)
+  );
+};
+
+const stripPositionedDecorationsForWeChat = (exportRoot: HTMLElement) => {
+  exportRoot.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+    if (isLikelyPositionedDecorativeImage(img)) {
+      img.remove();
+    }
+  });
+
+  exportRoot.querySelectorAll<HTMLElement>('section, div, span').forEach((node) => {
+    if (isLikelyPositionedDecorationNode(node)) {
       node.remove();
     }
   });
@@ -439,12 +491,23 @@ const normalizeImageBlocksForWeChat = (exportRoot: HTMLElement) => {
 };
 
 const hasMeaningfulWeChatContent = (node: HTMLElement): boolean => {
-  const text = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+  if (isPreservedWeChatDecorationNode(node)) return false;
+  if (node.matches(MEANINGFUL_WECHAT_SELECTOR)) return true;
+
+  const text = getNodeVisibleText(node);
   if (text.length > 0) return true;
 
-  return Boolean(
-    node.querySelector('img, table, pre, code, svg, video, audio, iframe, hr, ul, ol, li')
-  );
+  return Array.from(node.children).some((child) => (
+    child instanceof HTMLElement && hasMeaningfulWeChatContent(child)
+  ));
+};
+
+const stripEmptyTextBlocksForWeChat = (exportRoot: HTMLElement) => {
+  exportRoot.querySelectorAll<HTMLElement>('p, h1, h2, h3, h4, h5, h6').forEach((node) => {
+    if (!hasMeaningfulWeChatContent(node)) {
+      node.remove();
+    }
+  });
 };
 
 const trimTrailingSpacingForWeChat = (exportRoot: HTMLElement) => {
@@ -465,14 +528,134 @@ const trimTrailingSpacingForWeChat = (exportRoot: HTMLElement) => {
   }
 };
 
+const findLastMeaningfulLeafNode = (node: HTMLElement): HTMLElement | null => {
+  if (isPreservedWeChatDecorationNode(node)) return null;
+
+  const children = Array.from(node.children) as HTMLElement[];
+
+  for (let i = children.length - 1; i >= 0; i -= 1) {
+    const child = children[i];
+    const nested = findLastMeaningfulLeafNode(child);
+    if (nested) return nested;
+  }
+
+  if (node.tagName === 'IMG') return node;
+  if (getNodeVisibleText(node).length > 0) return node;
+  if (node.matches(MEANINGFUL_WECHAT_SELECTOR)) return node;
+
+  return null;
+};
+
+const applyWeChatTailSentinelStyle = (node: HTMLElement) => {
+  node.setAttribute('aria-hidden', 'true');
+  node.style.setProperty('display', 'block');
+  node.style.setProperty('clear', 'both');
+  node.style.setProperty('width', '100%');
+  node.style.setProperty('height', '1px');
+  node.style.setProperty('min-height', '1px');
+  node.style.setProperty('max-height', '1px');
+  node.style.setProperty('margin', '0');
+  node.style.setProperty('padding', '0');
+  node.style.setProperty('overflow', 'hidden');
+  node.style.setProperty('font-size', '1px');
+  node.style.setProperty('line-height', '1px');
+  node.style.setProperty('color', 'transparent');
+  node.style.setProperty('opacity', '0');
+  node.style.setProperty('pointer-events', 'none');
+};
+
+const createWeChatTailSentinel = (
+  ownerDocument: Document,
+  tagName: 'section' | 'span',
+  kind: string,
+): HTMLElement => {
+  const sentinel = ownerDocument.createElement(tagName);
+  sentinel.setAttribute(WECHAT_TAIL_ATTR, kind);
+  applyWeChatTailSentinelStyle(sentinel);
+  sentinel.textContent = '\u00a0';
+  return sentinel;
+};
+
+const hasWeChatTailSentinel = (node: HTMLElement, kind: string): boolean => (
+  Array.from(node.children).some((child) => (
+    child instanceof HTMLElement && child.getAttribute(WECHAT_TAIL_ATTR) === kind
+  ))
+);
+
+const appendWeChatBlockTailSentinel = (container: HTMLElement, kind: string) => {
+  if (hasWeChatTailSentinel(container, kind)) return;
+  container.appendChild(createWeChatTailSentinel(container.ownerDocument, 'section', kind));
+};
+
+const appendWeChatInlineTailSentinelAfterImage = (img: HTMLImageElement) => {
+  const parent = img.parentElement;
+  if (!parent || hasWeChatTailSentinel(parent, 'image-inline')) return;
+
+  img.insertAdjacentElement(
+    'afterend',
+    createWeChatTailSentinel(parent.ownerDocument, 'span', 'image-inline'),
+  );
+};
+
+const getElementSiblingsAfter = (parent: HTMLElement, child: HTMLElement): HTMLElement[] => {
+  const children = Array.from(parent.children) as HTMLElement[];
+  const index = children.indexOf(child);
+  if (index < 0) return [];
+  return children.slice(index + 1);
+};
+
+const findTrailingDecorativeContainer = (
+  img: HTMLImageElement,
+  exportRoot: HTMLElement,
+): HTMLElement | null => {
+  let current: HTMLElement = img;
+  let parent = img.parentElement as HTMLElement | null;
+
+  while (parent && parent !== exportRoot) {
+    const siblingsAfter = getElementSiblingsAfter(parent, current);
+    const hasTrailingElements = siblingsAfter.length > 0;
+    const hasMeaningfulTrailingContent = siblingsAfter.some((sibling) => hasMeaningfulWeChatContent(sibling));
+
+    if (
+      hasTrailingElements &&
+      !hasMeaningfulTrailingContent &&
+      ['SECTION', 'DIV', 'P'].includes(parent.tagName)
+    ) {
+      return parent;
+    }
+
+    current = parent;
+    parent = parent.parentElement as HTMLElement | null;
+  }
+
+  return null;
+};
+
+const appendTrailingImageTerminatorForWeChat = (exportRoot: HTMLElement) => {
+  const lastMeaningfulNode = findLastMeaningfulLeafNode(exportRoot);
+  if (!(lastMeaningfulNode instanceof HTMLImageElement)) return;
+
+  const trailingDecorativeContainer = findTrailingDecorativeContainer(lastMeaningfulNode, exportRoot);
+  appendWeChatInlineTailSentinelAfterImage(lastMeaningfulNode);
+
+  if (trailingDecorativeContainer) {
+    appendWeChatBlockTailSentinel(trailingDecorativeContainer, 'decorative-container');
+  }
+
+  appendWeChatBlockTailSentinel(exportRoot, 'root');
+};
+
 const preprocessWeChatClone = (sourceContentNode: HTMLElement, cloneNode: HTMLElement) => {
   stabilizeKatexForWeChat(sourceContentNode, cloneNode);
   stabilizeRubyForWeChat(cloneNode);
   stabilizeCodeBlocksForWeChat(cloneNode);
   stripDecorativeNodesForWeChat(cloneNode);
+  stripPositionedDecorationsForWeChat(cloneNode);
   normalizeImageBlocksForWeChat(cloneNode);
   stripGhostSvgNodesForWeChat(cloneNode);
+  stripEmptyTextBlocksForWeChat(cloneNode);
   trimTrailingSpacingForWeChat(cloneNode);
+  appendTrailingImageTerminatorForWeChat(cloneNode);
 };
 
 /**
@@ -491,6 +674,13 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
 
     // 收集所有图片节点，后续统一并行处理。
     const sourceImages = Array.from(contentNode.querySelectorAll('img'));
+    const sourceImagesByOriginalSrc = new Map<string, HTMLImageElement>();
+    sourceImages.forEach((img) => {
+      const originalSrc = readOriginalImageSrc(img);
+      if (originalSrc && !sourceImagesByOriginalSrc.has(originalSrc)) {
+        sourceImagesByOriginalSrc.set(originalSrc, img);
+      }
+    });
     const images = Array.from(clone.querySelectorAll('img'));
     const backgroundAssets = collectBackgroundAssetNodes(contentNode as HTMLElement, clone);
     const assetUploadCache = new Map<string, Promise<string>>();
@@ -510,8 +700,9 @@ export const processAndCopyWeChatHtml = async (container: HTMLElement): Promise<
     // 并行处理图片上传：单张失败不打断整体导出。
     await Promise.all(images.map(async (img, index) => {
         const src = img.src;
-        const sourceImg = sourceImages[index];
-        const originalSrc = readOriginalImageSrc(sourceImg) || readOriginalImageSrc(img);
+        const clonedOriginalSrc = readOriginalImageSrc(img);
+        const sourceImg = sourceImagesByOriginalSrc.get(clonedOriginalSrc) || sourceImages[index];
+        const originalSrc = clonedOriginalSrc || readOriginalImageSrc(sourceImg);
         try {
             let base64Data = '';
             const shouldUpload =

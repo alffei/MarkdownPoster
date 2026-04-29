@@ -20,7 +20,7 @@ const markdown = [
 ].join('\n');
 
 const renderPreview = (
-  template: 'basic' | 'recruit' | 'summer' | 'guobi',
+  template: 'basic' | 'recruit' | 'summer' | 'guobi' | 'spring',
   typographyStyle: 'standard' | 'editorial' = 'standard',
   sourceMarkdown = markdown
 ) => {
@@ -83,6 +83,30 @@ test('renders standalone markdown images outside paragraph tags in wechat mode',
   assert.doesNotMatch(html, /<\/section>\s*<\/p>/i);
 });
 
+test('renders adjacent standalone markdown images outside paragraph tags in wechat mode', () => {
+  const adjacentImagesMarkdown = [
+    '![第一张](https://example.com/one.png)',
+    '![第二张](https://example.com/two.png)',
+  ].join('\n');
+
+  const html = renderPreview('basic', 'standard', adjacentImagesMarkdown);
+
+  assert.doesNotMatch(html, /<p\b[^>]*>\s*<section\b/i);
+  assert.doesNotMatch(html, /<\/section>\s*<\/p>/i);
+});
+
+test('drops empty headings in basic wechat mode', () => {
+  const html = renderPreview('basic', 'standard', ['正文内容。', '', '##'].join('\n'));
+
+  assert.doesNotMatch(html, /<h2\b[^>]*>\s*<\/h2>/);
+});
+
+test('does not turn empty headings into winter section cards', () => {
+  const html = renderPreview('recruit', 'standard', ['正文内容。', '', '##'].join('\n'));
+
+  assert.doesNotMatch(html, /章节/);
+});
+
 test('renders summer sections without decorative placeholder nodes', () => {
   const summerMarkdown = [
     '## 夏日观察',
@@ -93,6 +117,38 @@ test('renders summer sections without decorative placeholder nodes', () => {
   const html = renderPreview('summer', 'standard', summerMarkdown);
   assert.match(html, /夏日观察/);
   assert.doesNotMatch(html, /data-mp-wechat-decorative="true"/);
+});
+
+test('keeps spring decorations in wechat-compatible markup', () => {
+  const springMarkdown = [
+    '## 春日观察',
+    '',
+    '这一节用于触发春天主题容器。',
+  ].join('\n');
+
+  const html = renderPreview('spring', 'standard', springMarkdown);
+
+  assert.match(html, /wx-spring-deco-title-brush-bg-v1\.png/);
+  assert.match(html, /wx-spring-deco-leaf-corner-top-left-v1\.png/);
+  assert.match(html, /wx-spring-deco-leaf-corner-right-v1\.png/);
+  assert.match(html, /wx-spring-deco-divider-wave-thin-v1\.png/);
+  assert.match(html, /data-mp-wechat-decoration="flow"/);
+  assert.doesNotMatch(html, /data-mp-wechat-decorative="true"/);
+  assert.doesNotMatch(html, /<img\b[^>]*wx-spring-deco-leaf-corner/);
+});
+
+test('renders winter terminal stripe as background decoration', () => {
+  const winterMarkdown = [
+    '## 冬日观察',
+    '',
+    '![末尾图片](https://example.com/tail.png)',
+  ].join('\n');
+
+  const html = renderPreview('recruit', 'standard', winterMarkdown);
+
+  assert.match(html, /background-image:linear-gradient\(to right/);
+  assert.match(html, /background-position:left bottom/);
+  assert.doesNotMatch(html, /margin-top:14px;width:100%;height:12px/);
 });
 
 test('renders guobi cards with blockquote containers for better wechat compatibility', () => {

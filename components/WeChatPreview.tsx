@@ -70,6 +70,11 @@ const parseInspirationMarker = (text: string): { kind: InspirationMarkerKind; cl
   return { kind: 'none', cleanText: source };
 };
 
+const hasImageChildNode = (node: any): boolean => {
+  if (!node || !Array.isArray(node.children)) return false;
+  return node.children.some((child: any) => child?.tagName === 'img');
+};
+
 const isImageOnlyParagraphNode = (node: any): boolean => {
   if (!node || !Array.isArray(node.children)) return false;
 
@@ -80,7 +85,7 @@ const isImageOnlyParagraphNode = (node: any): boolean => {
     return true;
   });
 
-  return meaningfulChildren.length === 1 && meaningfulChildren[0]?.tagName === 'img';
+  return meaningfulChildren.length > 0 && meaningfulChildren.every((child: any) => child?.tagName === 'img');
 };
 
 const SPRING_DECORATIVE_ASSETS = {
@@ -89,6 +94,18 @@ const SPRING_DECORATIVE_ASSETS = {
   leafTopLeft: './wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-top-left-v1.png',
   leafRight: './wechat-assets/spring-fresh/decorative/wx-spring-deco-leaf-corner-right-v1.png',
 };
+
+const WECHAT_PRESERVED_DECORATION_ATTR = 'data-mp-wechat-decoration';
+
+const createWeChatFlowEndDecorationStyle = (
+  backgroundImage: string,
+  height: string,
+): React.CSSProperties => ({
+  backgroundImage,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'left bottom',
+  backgroundSize: `100% ${height}`,
+});
 
 export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
   markdown,
@@ -208,6 +225,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
     }
 
     text = normalizeQuotedEmphasis(text);
+    text = text.replace(/^\s{0,3}#{1,6}\s*$/gm, '');
 
     return {
       processedMarkdown: text,
@@ -457,22 +475,34 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
           );
         }
 
+        const paragraphStyle = {
+          ...commonTextStyle,
+          ...templateRender.paragraph.style,
+          ...(templateRender.paragraph.marginBottom ? { marginBottom: templateRender.paragraph.marginBottom } : {}),
+          textIndent: config.indent ? '2em' : '0',
+          ...(templateRender.paragraph.minHeight ? { minHeight: templateRender.paragraph.minHeight } : {}),
+          ...(props.style || {}) // 合并外部样式，保留块引用末段覆盖能力
+        };
+
+        if (hasImageChildNode(node)) {
+          return (
+            <section style={paragraphStyle}>
+              {children}
+            </section>
+          );
+        }
+
         return (
           <p
-            style={{
-              ...commonTextStyle,
-              ...templateRender.paragraph.style,
-              ...(templateRender.paragraph.marginBottom ? { marginBottom: templateRender.paragraph.marginBottom } : {}),
-              textIndent: config.indent ? '2em' : '0',
-              ...(templateRender.paragraph.minHeight ? { minHeight: templateRender.paragraph.minHeight } : {}),
-              ...(props.style || {}) // 合并外部样式，保留块引用末段覆盖能力
-            }}
+            style={paragraphStyle}
           >
             {children}
           </p>
         );
       },
       h1: ({ node, children }: any) => {
+        if (!readNodeText(children).trim()) return null;
+
         if (isInspirationTemplate && templateRender.titleBlockMode === 'keep-first-h1') {
           inspirationCoverCount += 1;
           if (inspirationCoverCount === 1) {
@@ -557,6 +587,8 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         return <h1 style={{ ...themeStyle.h1, fontSize: headingSizes.h1, fontFamily: fontStyleDef.headingFontFamily }}>{children}</h1>;
       },
       h2: ({ node, children }: any) => {
+        if (!readNodeText(children).trim()) return null;
+
         if (isEditorialTemplate) {
           return (
             <h2
@@ -588,6 +620,8 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
         );
       },
       h3: ({ node, children }: any) => {
+        if (!readNodeText(children).trim()) return null;
+
         if (isEditorialTemplate) {
           return (
             <h3
@@ -972,7 +1006,17 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   </span>
                 </section>
 
-                <section style={{ position: 'relative', zIndex: 1, padding: '16px 14px 16px' }}>
+                <section
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    padding: '16px 14px 28px',
+                    ...createWeChatFlowEndDecorationStyle(
+                      `linear-gradient(to right, ${hexToRgba(config.primaryColor, 0.85)} 0%, rgba(255,255,255,0.95) 100%)`,
+                      '12px',
+                    ),
+                  }}
+                >
                   {sectionChildren.map((child, index) => {
                     if (index === sectionLastElementIndex && React.isValidElement(child)) {
                       const element = child as React.ReactElement<any>;
@@ -985,15 +1029,6 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     }
                     return child;
                   })}
-
-                  <section
-                    style={{
-                      marginTop: '14px',
-                      width: '100%',
-                      height: '12px',
-                      background: `linear-gradient(to right, ${hexToRgba(config.primaryColor, 0.85)} 0%, rgba(255,255,255,0.95) 100%)`,
-                    }}
-                  />
                 </section>
               </section>
             </section>
@@ -1021,8 +1056,9 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                   marginBottom: '8px',
                 }}
               >
-                <section
+                <span
                   style={{
+                    display: 'inline-block',
                     backgroundImage: `url(${SPRING_DECORATIVE_ASSETS.titleBrush})`,
                     backgroundSize: '100% 100%',
                     backgroundPosition: 'center',
@@ -1031,10 +1067,14 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     boxSizing: 'border-box',
                     minWidth: '190px',
                     maxWidth: '90%',
+                    border: '0',
+                    outline: '0',
+                    verticalAlign: 'middle',
                   }}
                 >
-                  <section
+                  <span
                     style={{
+                      display: 'block',
                       fontSize: '20px',
                       color: '#ffffff',
                       textAlign: 'center',
@@ -1046,52 +1086,34 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                     }}
                   >
                     {headingText}
-                  </section>
-                </section>
+                  </span>
+                </span>
               </section>
               <section
                 style={{
                   position: 'relative',
                   marginTop: '16px',
+                  backgroundImage: `url(${SPRING_DECORATIVE_ASSETS.leafTopLeft})`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'left top',
+                  backgroundSize: '92px auto',
+                  paddingTop: '18px',
                 }}
               >
-                <img
-                  src={SPRING_DECORATIVE_ASSETS.leafTopLeft}
-                  alt=""
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    left: '-18px',
-                    top: '-26px',
-                    width: '92px',
-                    opacity: 0.72,
-                    pointerEvents: 'none',
-                    zIndex: 2,
-                  }}
-                />
                 <section
                   style={{
                     position: 'relative',
                     backgroundColor: '#f3faed',
+                    backgroundImage: `url(${SPRING_DECORATIVE_ASSETS.leafRight})`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right bottom',
+                    backgroundSize: '54px auto',
                     border: '1px solid #dbe8cc',
                     padding: '22px 15px 18px',
                     boxSizing: 'border-box',
                     overflow: 'hidden',
                   }}
                 >
-                  <img
-                    src={SPRING_DECORATIVE_ASSETS.leafRight}
-                    alt=""
-                    aria-hidden="true"
-                    style={{
-                      position: 'absolute',
-                      right: '-10px',
-                      bottom: '6px',
-                      width: '54px',
-                      opacity: 0.35,
-                      pointerEvents: 'none',
-                    }}
-                  />
                   <section style={{ position: 'relative', zIndex: 1 }}>
                     {sectionChildren.map((child, index) => {
                       if (index === sectionLastElementIndex && React.isValidElement(child)) {
@@ -1119,6 +1141,7 @@ export const WeChatPreview = forwardRef<HTMLDivElement, WeChatPreviewProps>(({
                       src={SPRING_DECORATIVE_ASSETS.curveBottom}
                       alt=""
                       aria-hidden="true"
+                      {...{ [WECHAT_PRESERVED_DECORATION_ATTR]: 'flow' }}
                       style={{
                         width: '84%',
                         maxWidth: '680px',
